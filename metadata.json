@@ -1,0 +1,6 @@
+{
+  "name": "MultiLink",
+  "description": "Creator landing page to consolidate social links, monetize digital products and services, track audience analytics in real-time, and generate custom QR codes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

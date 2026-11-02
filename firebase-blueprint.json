@@ -1,0 +1,28 @@
+{
+  "entities": {
+    "User": {
+      "path": "users/{userId}",
+      "fields": {
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
+      }
+    },
+    "CustomerOrder": {
+      "path": "users/{userId}/customer_orders/{orderId}",
+      "fields": {
+        "orderId": { "type": "string" },
+        "itemTitle": { "type": "string" },
+        "itemCategory": { "type": "string" },
+        "price": { "type": "number" },
+        "creatorHandle": { "type": "string" },
+        "creatorName": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      }
+    }
+  }
+}
