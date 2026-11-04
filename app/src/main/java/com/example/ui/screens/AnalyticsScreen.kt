@@ -11,8 +11,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -160,7 +163,10 @@ fun AnalyticsScreen(
                         onClick = onSimulateClick,
                         colors = ButtonDefaults.buttonColors(containerColor = BrandSuccess),
                         shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.testTag("simulate_traffic_button")
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier
+                            .defaultMinSize(minHeight = 36.dp)
+                            .testTag("simulate_traffic_button")
                     ) {
                         Icon(
                             Icons.Default.Bolt,
@@ -182,11 +188,12 @@ fun AnalyticsScreen(
 
         // Timeframe selector
         item {
-            Row(
+            LazyRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 2.dp)
             ) {
-                listOf("Today", "7 Days", "30 Days", "All Time").forEach { period ->
+                items(listOf("Today", "7 Days", "30 Days", "All Time")) { period ->
                     FilterChip(
                         selected = selectedTimeframe == period,
                         onClick = { selectedTimeframe = period },

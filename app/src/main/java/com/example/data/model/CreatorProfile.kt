@@ -27,5 +27,7 @@ data class CreatorProfile(
     val preferredTipMethod: String = "Stripe", // "Stripe", "PayPal", "CashApp"
     // MultiLink PRO Tier (Paid Version)
     val isProUser: Boolean = false,
-    val proPlanTier: String = "FREE" // "FREE", "PRO_MONTHLY", "PRO_ANNUAL"
+    val proPlanTier: String = "FREE", // "FREE", "PRO_MONTHLY", "PRO_ANNUAL"
+    val proPaymentMethod: String = "",
+    val proSubscriptionRenewalDate: String = ""
 )

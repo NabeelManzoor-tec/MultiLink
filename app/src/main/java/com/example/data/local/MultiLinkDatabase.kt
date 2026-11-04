@@ -14,7 +14,7 @@ import com.example.data.model.LinkItem
         LinkItem::class,
         ClickEvent::class
     ],
-    version = 2,
+    version = 4,
     exportSchema = false
 )
 abstract class MultiLinkDatabase : RoomDatabase() {

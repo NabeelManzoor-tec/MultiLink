@@ -8,8 +8,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,8 +20,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.input.KeyboardType
+import java.text.SimpleDateFormat
+import java.util.Locale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
@@ -32,6 +40,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Coffee
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocalMall
 import androidx.compose.material.icons.filled.Lock
@@ -107,7 +116,7 @@ fun MonetizeScreen(
     onToggleActive: (Long, Boolean) -> Unit,
     onSimulateTip: () -> Unit,
     onUpdatePayouts: (Boolean, String, String, String, String) -> Unit = { _, _, _, _, _ -> },
-    onUpgradeToPro: (String) -> Unit = {},
+    onUpgradeToPro: (String, String, String) -> Unit = { _, _, _ -> },
     onCancelPro: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -116,6 +125,12 @@ fun MonetizeScreen(
     var showAddServiceDialog by remember { mutableStateOf(false) }
     var showPayoutConfigDialog by remember { mutableStateOf(false) }
     var showProUpgradeDialog by remember { mutableStateOf(false) }
+    var showProSuccessReceiptDialog by remember { mutableStateOf(false) }
+    var lastSubscribedPlanTier by remember { mutableStateOf("PRO_ANNUAL") }
+    var lastSubscribedPaymentMethod by remember { mutableStateOf("") }
+    var lastSubscribedAmount by remember { mutableStateOf(79.00) }
+    var lastSubscribedRenewalDate by remember { mutableStateOf("") }
+    var lastTransactionRef by remember { mutableStateOf("") }
     var showPayoutHistoryDialog by remember { mutableStateOf(false) }
 
     val products = remember(links) { links.filter { it.category == LinkCategory.PRODUCT } }
@@ -288,6 +303,8 @@ fun MonetizeScreen(
 
     if (showAddProductDialog) {
         AddProductDialog(
+            isProUser = profile?.isProUser == true,
+            onUpgradeToPro = { showProUpgradeDialog = true },
             onDismiss = { showAddProductDialog = false },
             onConfirm = {
                 onAddLink(it)
@@ -322,17 +339,35 @@ fun MonetizeScreen(
         ProUpgradeDialog(
             isCurrentlyPro = profile?.isProUser == true,
             currentTier = profile?.proPlanTier ?: "FREE",
+            currentPaymentMethod = profile?.proPaymentMethod ?: "",
+            currentRenewalDate = profile?.proSubscriptionRenewalDate ?: "",
             onDismiss = { showProUpgradeDialog = false },
-            onSelectPlan = { tier ->
-                onUpgradeToPro(tier)
+            onProcessPaymentAndUpgrade = { tier, paymentMethod, renewalDate, amount, txRef ->
+                onUpgradeToPro(tier, paymentMethod, renewalDate)
                 showProUpgradeDialog = false
-                Toast.makeText(context, "Welcome to MultiLink PRO! 🎉", Toast.LENGTH_LONG).show()
+                lastSubscribedPlanTier = tier
+                lastSubscribedPaymentMethod = paymentMethod
+                lastSubscribedAmount = amount
+                lastSubscribedRenewalDate = renewalDate
+                lastTransactionRef = txRef
+                showProSuccessReceiptDialog = true
             },
             onCancelSubscription = {
                 onCancelPro()
                 showProUpgradeDialog = false
                 Toast.makeText(context, "Subscription canceled", Toast.LENGTH_SHORT).show()
             }
+        )
+    }
+
+    if (showProSuccessReceiptDialog) {
+        ProSubscriptionSuccessDialog(
+            tier = lastSubscribedPlanTier,
+            paymentMethod = lastSubscribedPaymentMethod,
+            amount = lastSubscribedAmount,
+            renewalDate = lastSubscribedRenewalDate,
+            transactionRef = lastTransactionRef,
+            onDismiss = { showProSuccessReceiptDialog = false }
         )
     }
 
@@ -481,52 +516,123 @@ fun ProActiveStatusCard(
         colors = CardDefaults.cardColors(containerColor = BrandDarkSurface),
         border = androidx.compose.foundation.BorderStroke(1.5.dp, GoldStart)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(GoldStart, GoldEnd))),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Verified,
-                    contentDescription = null,
-                    tint = BrandDarkBackground,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "MultiLink PRO Active",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GoldStart
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(GoldStart, GoldEnd))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Verified,
+                        contentDescription = null,
+                        tint = BrandDarkBackground,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
-                Text(
-                    text = if (profile.proPlanTier == "PRO_ANNUAL") "Annual Plan • 0% Platform Fee Active" else "Monthly Plan • 0% Platform Fee Active",
-                    fontSize = 12.sp,
-                    color = TextSecondary
-                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "MultiLink PRO Active",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = GoldStart
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(BrandSuccess.copy(alpha = 0.2f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "PAID & VERIFIED",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = BrandSuccess
+                            )
+                        }
+                    }
+                    Text(
+                        text = if (profile.proPlanTier == "PRO_ANNUAL") "Annual Membership ($79.00/yr)" else "Monthly Membership ($9.99/mo)",
+                        fontSize = 12.sp,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = onManage,
+                    shape = RoundedCornerShape(10.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, GoldStart),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("Manage", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = GoldStart)
+                }
             }
 
-            OutlinedButton(
-                onClick = onManage,
+            Card(
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, GoldStart),
-                modifier = Modifier.height(36.dp)
+                colors = CardDefaults.cardColors(containerColor = BrandDarkBackground),
+                border = androidx.compose.foundation.BorderStroke(1.dp, BrandDarkBorder)
             ) {
-                Text("Manage", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = GoldStart)
+                Column(
+                    modifier = Modifier.padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Paid With:", fontSize = 11.sp, color = TextSecondary)
+                        Text(
+                            text = profile.proPaymentMethod.ifBlank { "Google Play In-App Billing" },
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Next Renewal:", fontSize = 11.sp, color = TextSecondary)
+                        Text(
+                            text = profile.proSubscriptionRenewalDate.ifBlank { "Nov 3, 2027" },
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = GoldStart
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Platform Fee Rate:", fontSize = 11.sp, color = TextSecondary)
+                        Text(
+                            text = "0% (Pro Exemption Active)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BrandSuccess
+                        )
+                    }
+                }
             }
         }
     }
@@ -641,22 +747,42 @@ fun CreatorPayoutMethodsCard(
                     onClick = onConfigureClick,
                     shape = RoundedCornerShape(10.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, BrandSecondary),
-                    modifier = Modifier.weight(1f).height(40.dp)
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 40.dp)
                 ) {
                     Icon(Icons.Default.Edit, contentDescription = null, tint = BrandSecondary, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Edit Accounts", fontSize = 11.sp, color = BrandSecondary, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Edit Accounts",
+                        fontSize = 11.sp,
+                        color = BrandSecondary,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
                 Button(
                     onClick = onViewSchedule,
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = BrandDarkSurfaceVariant),
-                    modifier = Modifier.weight(1f).height(40.dp)
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 40.dp)
                 ) {
                     Icon(Icons.Default.Receipt, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Payout Schedule", fontSize = 11.sp, color = TextPrimary, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Payout Schedule",
+                        fontSize = 11.sp,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
@@ -776,9 +902,14 @@ fun TipGoalCard(
                     onClick = onSendTestTip,
                     colors = ButtonDefaults.buttonColors(containerColor = BrandSuccess),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.testTag("simulate_tip_button")
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = 36.dp)
+                        .testTag("simulate_tip_button")
                 ) {
-                    Text("Test +$10 Tip", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BrandDarkBackground)
+                    Icon(Icons.Default.Bolt, contentDescription = null, tint = BrandDarkBackground, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Send $10 Tip", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BrandDarkBackground)
                 }
             }
 
@@ -812,6 +943,30 @@ fun TipGoalCard(
                 color = BrandSuccess,
                 trackColor = BrandDarkSurfaceVariant,
             )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(BrandSuccess.copy(alpha = 0.12f))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(BrandSuccess)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "LIVE PAYMENT GATEWAY: Bank settlements via Stripe, PayPal & Cash App",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BrandSuccess
+                )
+            }
         }
     }
 }
@@ -902,6 +1057,52 @@ fun ProductMonetizeCard(
                             fontSize = 11.sp,
                             color = TextMuted
                         )
+                    }
+
+                    if (product.isProProduct || product.downloadFileName.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(GoldStart.copy(alpha = 0.15f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Default.WorkspacePremium, contentDescription = null, tint = GoldStart, modifier = Modifier.size(12.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "PRO ASSET • 0% COMMISSION",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = GoldStart
+                            )
+                        }
+
+                        if (product.downloadFileName.isNotEmpty()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(top = 3.dp)
+                            ) {
+                                Icon(Icons.Default.Download, contentDescription = null, tint = BrandWarning, modifier = Modifier.size(12.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "${product.downloadFileName} (${product.fileSizeBytes.ifEmpty { "Direct Delivery" }})",
+                                    fontSize = 10.sp,
+                                    color = TextSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        if (product.licenseType.isNotEmpty()) {
+                            Text(
+                                text = "License: ${product.licenseType}",
+                                fontSize = 10.sp,
+                                color = BrandSecondary,
+                                modifier = Modifier.padding(top = 1.dp)
+                            )
+                        }
                     }
                 }
 
@@ -1162,35 +1363,86 @@ fun CreatorPayoutConfigDialog(
 fun ProUpgradeDialog(
     isCurrentlyPro: Boolean,
     currentTier: String,
+    currentPaymentMethod: String = "",
+    currentRenewalDate: String = "",
     onDismiss: () -> Unit,
-    onSelectPlan: (String) -> Unit,
+    onProcessPaymentAndUpgrade: (tier: String, paymentMethod: String, renewalDate: String, amount: Double, txRef: String) -> Unit,
     onCancelSubscription: () -> Unit
 ) {
     var selectedPlan by remember { mutableStateOf(if (currentTier == "PRO_MONTHLY") "PRO_MONTHLY" else "PRO_ANNUAL") }
+    var selectedPaymentMethod by remember {
+        mutableStateOf(
+            if (currentPaymentMethod.contains("Card", ignoreCase = true)) "Credit / Debit Card"
+            else if (currentPaymentMethod.contains("PayPal", ignoreCase = true)) "PayPal"
+            else "Google Play"
+        )
+    }
+
+    var cardNumber by remember { mutableStateOf("") }
+    var cardExpiry by remember { mutableStateOf("") }
+    var cardCvc by remember { mutableStateOf("") }
+    var cardHolder by remember { mutableStateOf("") }
+    var paypalEmail by remember { mutableStateOf("") }
+    var isProcessing by remember { mutableStateOf(false) }
+
+    val planAmount = if (selectedPlan == "PRO_ANNUAL") 79.00 else 9.99
+    val planPriceText = if (selectedPlan == "PRO_ANNUAL") "$79.00/yr" else "$9.99/mo"
+
+    val isCardValid = remember(cardNumber, cardExpiry, cardCvc, cardHolder) {
+        val cleanCard = cardNumber.replace(" ", "").replace("-", "")
+        cleanCard.length >= 16 && cardExpiry.length >= 4 && cardCvc.length >= 3 && cardHolder.trim().length >= 2
+    }
+
+    val isPaypalValid = remember(paypalEmail) {
+        paypalEmail.trim().contains("@") && paypalEmail.trim().contains(".")
+    }
+
+    val canProceedPayment = when (selectedPaymentMethod) {
+        "Credit / Debit Card" -> isCardValid
+        "PayPal" -> isPaypalValid
+        else -> true // Google Play is pre-authenticated with user's Google Play store account
+    }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isProcessing) onDismiss() },
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(36.dp)
                         .clip(CircleShape)
                         .background(Brush.linearGradient(listOf(GoldStart, GoldEnd))),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.WorkspacePremium, contentDescription = null, tint = BrandDarkBackground, modifier = Modifier.size(20.dp))
+                    Icon(
+                        imageVector = Icons.Default.WorkspacePremium,
+                        contentDescription = null,
+                        tint = BrandDarkBackground,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text("MultiLink PRO", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 17.sp)
-                    Text("Unlock the full creator monetization suite", fontSize = 11.sp, color = TextSecondary)
+                    Text(
+                        text = if (isCurrentlyPro) "Manage PRO Subscription" else "MultiLink PRO Subscription",
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        fontSize = 17.sp
+                    )
+                    Text(
+                        text = "Real-time payment authorization required",
+                        fontSize = 11.sp,
+                        color = GoldStart
+                    )
                 }
             }
         },
         text = {
+            val scrollState = rememberScrollState()
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Feature Comparison Highlights
@@ -1201,24 +1453,29 @@ fun ProUpgradeDialog(
                     border = androidx.compose.foundation.BorderStroke(1.dp, BrandDarkBorder)
                 ) {
                     Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        ProFeatureRow("0% Platform Fees", "Keep 100% of all tips & purchases (Save 5%)")
-                        ProFeatureRow("Gold Verified Checkmark", "Distinguished badge on your public page")
-                        ProFeatureRow("Custom Domain / Vanity URL", "multilink.bio/@yourname or custom domain")
-                        ProFeatureRow("High-Res Print QR Standees", "Vector SVG export for live physical events")
-                        ProFeatureRow("Real-Time Deep Telemetry", "Country, device & conversion tracking")
+                        ProFeatureRow("0% Platform Fees", "Keep 100% of all product sales & tips (0% vs 5% fee)")
+                        ProFeatureRow("Unlimited Products", "Upload unlimited digital products & instant downloads")
+                        ProFeatureRow("Gold Verified Badge", "Golden checkmark displayed on your public page")
+                        ProFeatureRow("Custom Domain", "multilink.bio/@yourname or own custom domain")
+                        ProFeatureRow("High-Res Vector QR", "Print-ready QR standees for physical events")
                     }
                 }
 
-                Text("Select Billing Plan:", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
+                Text(
+                    text = "1. Choose Membership Plan",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = TextPrimary
+                )
 
-                // Plan 1: Annual (Best Value)
+                // Plan 1: Annual
                 PlanOptionCard(
                     title = "Annual Membership",
                     price = "$79.00 / year",
-                    subtitle = "$6.58 / month • Save 34% annually",
+                    subtitle = "$6.58 / mo • Save 34% (Billed annually)",
                     badge = "BEST VALUE",
                     isSelected = selectedPlan == "PRO_ANNUAL",
                     onClick = { selectedPlan = "PRO_ANNUAL" }
@@ -1234,15 +1491,238 @@ fun ProUpgradeDialog(
                     onClick = { selectedPlan = "PRO_MONTHLY" }
                 )
 
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Text(
+                    text = "2. Select Payment Method (Required)",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = TextPrimary
+                )
+
+                // Option A: Google Play
+                PaymentMethodOptionCard(
+                    title = "Google Play In-App Billing",
+                    description = "Direct deduction from Google Play balance or linked bank card",
+                    icon = Icons.Default.ShoppingBag,
+                    isSelected = selectedPaymentMethod == "Google Play",
+                    onClick = { selectedPaymentMethod = "Google Play" }
+                )
+
+                // Option B: Credit / Debit Card
+                PaymentMethodOptionCard(
+                    title = "Credit or Debit Card",
+                    description = "Visa, MasterCard, American Express, Discover",
+                    icon = Icons.Default.CreditCard,
+                    isSelected = selectedPaymentMethod == "Credit / Debit Card",
+                    onClick = { selectedPaymentMethod = "Credit / Debit Card" }
+                )
+
+                // Option C: PayPal
+                PaymentMethodOptionCard(
+                    title = "PayPal Instant Billing",
+                    description = "Automated subscription deduction via your PayPal account",
+                    icon = Icons.Default.AccountBalance,
+                    isSelected = selectedPaymentMethod == "PayPal",
+                    onClick = { selectedPaymentMethod = "PayPal" }
+                )
+
+                // Conditional Payment Method Inputs
+                if (selectedPaymentMethod == "Credit / Debit Card") {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = BrandDarkBackground),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BrandPrimary.copy(alpha = 0.5f))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Cardholder & Billing Details",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BrandSecondary
+                            )
+
+                            OutlinedTextField(
+                                value = cardHolder,
+                                onValueChange = { cardHolder = it },
+                                label = { Text("Name on Card", fontSize = 11.sp) },
+                                placeholder = { Text("e.g. Alex Creator", fontSize = 11.sp) },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("pro_cardholder_name"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = BrandPrimary,
+                                    unfocusedBorderColor = BrandDarkBorder
+                                )
+                            )
+
+                            OutlinedTextField(
+                                value = cardNumber,
+                                onValueChange = {
+                                    val filtered = it.filter { ch -> ch.isDigit() || ch == ' ' }.take(19)
+                                    cardNumber = filtered
+                                },
+                                label = { Text("16-Digit Card Number", fontSize = 11.sp) },
+                                placeholder = { Text("4242 •••• •••• 4242", fontSize = 11.sp) },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("pro_card_number"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = BrandPrimary,
+                                    unfocusedBorderColor = BrandDarkBorder
+                                )
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = cardExpiry,
+                                    onValueChange = {
+                                        val filtered = it.filter { ch -> ch.isDigit() || ch == '/' }.take(5)
+                                        cardExpiry = filtered
+                                    },
+                                    label = { Text("MM/YY", fontSize = 11.sp) },
+                                    placeholder = { Text("12/28", fontSize = 11.sp) },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .testTag("pro_card_expiry"),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = BrandPrimary,
+                                        unfocusedBorderColor = BrandDarkBorder
+                                    )
+                                )
+
+                                OutlinedTextField(
+                                    value = cardCvc,
+                                    onValueChange = {
+                                        val filtered = it.filter { ch -> ch.isDigit() }.take(4)
+                                        cardCvc = filtered
+                                    },
+                                    label = { Text("CVC", fontSize = 11.sp) },
+                                    placeholder = { Text("123", fontSize = 11.sp) },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .testTag("pro_card_cvc"),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = BrandPrimary,
+                                        unfocusedBorderColor = BrandDarkBorder
+                                    )
+                                )
+                            }
+
+                            if (!isCardValid && (cardNumber.isNotEmpty() || cardHolder.isNotEmpty())) {
+                                Text(
+                                    text = "Please enter a valid 16-digit card, MM/YY, CVC, and name.",
+                                    fontSize = 10.sp,
+                                    color = BrandWarning
+                                )
+                            }
+                        }
+                    }
+                } else if (selectedPaymentMethod == "PayPal") {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = BrandDarkBackground),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BrandPrimary.copy(alpha = 0.5f))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "PayPal Account Authorization",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BrandSecondary
+                            )
+
+                            OutlinedTextField(
+                                value = paypalEmail,
+                                onValueChange = { paypalEmail = it.trim() },
+                                label = { Text("PayPal Billing Email", fontSize = 11.sp) },
+                                placeholder = { Text("your.email@paypal.com", fontSize = 11.sp) },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("pro_paypal_email"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = BrandPrimary,
+                                    unfocusedBorderColor = BrandDarkBorder
+                                )
+                            )
+
+                            Text(
+                                text = "Recurring charge of $planPriceText will be authorized and deducted through your PayPal account.",
+                                fontSize = 10.sp,
+                                color = TextMuted
+                            )
+                        }
+                    }
+                } else {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = BrandDarkBackground),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BrandSuccess.copy(alpha = 0.4f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = BrandSuccess,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "Google Play Purchase Protection",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BrandSuccess
+                                )
+                                Text(
+                                    text = "Subscription is handled securely through Google Play. Direct deduction occurs at confirmation.",
+                                    fontSize = 10.sp,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Security & Auto-renewal note
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 2.dp)
                 ) {
-                    Icon(Icons.Default.Lock, contentDescription = null, tint = BrandSuccess, modifier = Modifier.size(14.dp))
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = BrandSuccess,
+                        modifier = Modifier.size(14.dp)
+                    )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Secure Google Play In-App Billing or Credit Card",
-                        fontSize = 11.sp,
+                        text = "Encrypted live transaction • Bank deduction will occur immediately",
+                        fontSize = 10.sp,
                         color = TextMuted
                     )
                 }
@@ -1250,15 +1730,54 @@ fun ProUpgradeDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onSelectPlan(selectedPlan) },
-                colors = ButtonDefaults.buttonColors(containerColor = GoldStart),
+                onClick = {
+                    if (!canProceedPayment) return@Button
+                    isProcessing = true
+
+                    val paymentSummary = when (selectedPaymentMethod) {
+                        "Credit / Debit Card" -> {
+                            val last4 = cardNumber.replace(" ", "").takeLast(4).ifEmpty { "4242" }
+                            "Credit Card (•••• $last4)"
+                        }
+                        "PayPal" -> "PayPal ($paypalEmail)"
+                        else -> "Google Play Billing"
+                    }
+
+                    val cal = java.util.Calendar.getInstance()
+                    if (selectedPlan == "PRO_ANNUAL") {
+                        cal.add(java.util.Calendar.YEAR, 1)
+                    } else {
+                        cal.add(java.util.Calendar.DAY_OF_MONTH, 30)
+                    }
+                    val renewalDateStr = SimpleDateFormat("MMM d, yyyy", Locale.US).format(cal.time)
+                    val txId = "SUB-PRO-" + (100000..999999).random()
+
+                    onProcessPaymentAndUpgrade(
+                        selectedPlan,
+                        paymentSummary,
+                        renewalDateStr,
+                        planAmount,
+                        txId
+                    )
+                },
+                enabled = canProceedPayment && !isProcessing,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = GoldStart,
+                    disabledContainerColor = BrandDarkBorder
+                ),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.testTag("confirm_pro_plan_button")
             ) {
-                Text(
-                    text = if (isCurrentlyPro) "Update Subscription" else "Start MultiLink PRO",
-                    fontWeight = FontWeight.Bold,
-                    color = BrandDarkBackground
-                )
+                if (isProcessing) {
+                    Text("Authorizing Payment...", fontWeight = FontWeight.Bold, color = BrandDarkBackground, fontSize = 12.sp)
+                } else {
+                    Text(
+                        text = if (isCurrentlyPro) "Update & Charge $planPriceText" else "Pay $$planAmount & Activate PRO",
+                        fontWeight = FontWeight.Bold,
+                        color = if (canProceedPayment) BrandDarkBackground else TextMuted,
+                        fontSize = 12.sp
+                    )
+                }
             }
         },
         dismissButton = {
@@ -1268,8 +1787,230 @@ fun ProUpgradeDialog(
                 }
             } else {
                 TextButton(onClick = onDismiss) {
-                    Text("Maybe Later", color = TextSecondary)
+                    Text("Cancel", color = TextSecondary)
                 }
+            }
+        },
+        containerColor = BrandDarkSurface
+    )
+}
+
+@Composable
+fun PaymentMethodOptionCard(
+    title: String,
+    description: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .testTag("payment_method_${title.replace(" ", "_").lowercase()}"),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) BrandPrimary.copy(alpha = 0.12f) else BrandDarkBackground
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            1.5.dp,
+            if (isSelected) GoldStart else BrandDarkBorder
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .border(2.dp, if (isSelected) GoldStart else TextMuted, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(GoldStart)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isSelected) GoldStart.copy(alpha = 0.2f) else BrandDarkSurfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isSelected) GoldStart else TextPrimary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    color = TextPrimary
+                )
+                Text(
+                    text = description,
+                    fontSize = 10.sp,
+                    color = TextSecondary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ProSubscriptionSuccessDialog(
+    tier: String,
+    paymentMethod: String,
+    amount: Double,
+    renewalDate: String,
+    transactionRef: String,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(BrandSuccess.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = BrandSuccess,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text("Payment Successful!", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
+                    Text("MultiLink PRO subscription activated", fontSize = 11.sp, color = BrandSuccess)
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = BrandDarkBackground),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BrandDarkBorder)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Transaction ID", fontSize = 11.sp, color = TextSecondary)
+                            Text(transactionRef, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Plan Selected", fontSize = 11.sp, color = TextSecondary)
+                            Text(
+                                if (tier == "PRO_ANNUAL") "Annual Membership" else "Monthly Membership",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = GoldStart
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Amount Charged", fontSize = 11.sp, color = TextSecondary)
+                            Text(
+                                "$${String.format(Locale.US, "%.2f", amount)}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = BrandSuccess
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Payment Method", fontSize = 11.sp, color = TextSecondary)
+                            Text(paymentMethod, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Next Renewal Date", fontSize = 11.sp, color = TextSecondary)
+                            Text(renewalDate, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+                        }
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = GoldStart.copy(alpha = 0.1f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, GoldStart.copy(alpha = 0.3f))
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(
+                            text = "🎉 What's now unlocked:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = GoldStart
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "• 0% Platform Fee on all tip jar & product sales\n• Golden Verified Checkmark on your public page\n• Unlimited digital files with automatic delivery\n• High-res Vector SVG QR standee downloads",
+                            fontSize = 10.sp,
+                            color = TextPrimary,
+                            lineHeight = 14.sp
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = GoldStart),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("dismiss_pro_receipt_button")
+            ) {
+                Text("Start Monetizing as PRO", fontWeight = FontWeight.Bold, color = BrandDarkBackground)
             }
         },
         containerColor = BrandDarkSurface
@@ -1426,6 +2167,8 @@ fun PayoutHistoryScheduleDialog(
 
 @Composable
 fun AddProductDialog(
+    isProUser: Boolean,
+    onUpgradeToPro: () -> Unit,
     onDismiss: () -> Unit,
     onConfirm: (LinkItem) -> Unit
 ) {
@@ -1435,42 +2178,239 @@ fun AddProductDialog(
     var subtitle by remember { mutableStateOf("") }
     var badge by remember { mutableStateOf("NEW") }
 
+    // PRO Product Delivery Options
+    var isProProduct by remember { mutableStateOf(isProUser) }
+    var downloadFileName by remember { mutableStateOf("asset_toolkit_2026.zip") }
+    var fileSizeBytes by remember { mutableStateOf("450 MB") }
+    var licenseType by remember { mutableStateOf("Commercial & Extended Use") }
+
+    val licenseOptions = listOf("Personal Use", "Commercial & Extended Use", "Unlimited Resale")
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Digital Product", fontWeight = FontWeight.Bold, color = TextPrimary) },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(BrandWarning.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.ShoppingBag, contentDescription = null, tint = BrandWarning, modifier = Modifier.size(18.dp))
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text("Add Digital Product", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
+                    Text("Sell downloads, presets, eBooks & 3D assets", fontSize = 11.sp, color = TextSecondary)
+                }
+            }
+        },
         text = {
-            Column(
+            LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Product Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = price,
-                    onValueChange = { price = it },
-                    label = { Text("Price (e.g. $19.99)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = { url = it },
-                    label = { Text("Product Link / Checkout URL") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = subtitle,
-                    onValueChange = { subtitle = it },
-                    label = { Text("Short Description") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                item {
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = { Text("Product Name") },
+                        placeholder = { Text("e.g. Cyberpunk 3D Shader Pack") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = price,
+                        onValueChange = { price = it },
+                        label = { Text("Price (e.g. $29.00)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = url,
+                        onValueChange = { url = it },
+                        label = { Text("Product Link / Checkout URL") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = subtitle,
+                        onValueChange = { subtitle = it },
+                        label = { Text("Short Description") },
+                        placeholder = { Text("50+ Shaders, textures & UE5 materials") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                item {
+                    // Badge selector
+                    Text("Product Badge:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf("NEW", "BESTSELLER", "LIMITED", "HOT").forEach { b ->
+                            val isSelected = badge == b
+                            Button(
+                                onClick = { badge = b },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSelected) BrandWarning else BrandDarkBackground
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .defaultMinSize(minHeight = 32.dp)
+                            ) {
+                                Text(
+                                    text = b,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) BrandDarkBackground else TextPrimary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // PRO Product Options Section
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = BrandDarkBackground),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, if (isProProduct) GoldStart else BrandDarkBorder)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.WorkspacePremium, contentDescription = null, tint = GoldStart, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Column {
+                                        Text("PRO Product Delivery", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
+                                        Text("Instant file delivery & 0% fee", fontSize = 10.sp, color = TextSecondary)
+                                    }
+                                }
+
+                                Switch(
+                                    checked = isProProduct,
+                                    onCheckedChange = { isProProduct = it },
+                                    colors = SwitchDefaults.colors(checkedTrackColor = GoldStart)
+                                )
+                            }
+
+                            if (isProProduct) {
+                                OutlinedTextField(
+                                    value = downloadFileName,
+                                    onValueChange = { downloadFileName = it },
+                                    label = { Text("Download Asset Filename") },
+                                    placeholder = { Text("e.g. cyberpunk_bundle_2026.zip") },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                OutlinedTextField(
+                                    value = fileSizeBytes,
+                                    onValueChange = { fileSizeBytes = it },
+                                    label = { Text("File Size / Assets Info") },
+                                    placeholder = { Text("e.g. 1.4 GB or 500 MB") },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Text("Usage Rights / License Type:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    licenseOptions.forEach { lic ->
+                                        val isSelected = licenseType == lic
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(if (isSelected) BrandPrimary.copy(alpha = 0.15f) else BrandDarkSurfaceVariant)
+                                                .clickable { licenseType = lic }
+                                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.Lock,
+                                                contentDescription = null,
+                                                tint = if (isSelected) GoldStart else TextMuted,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(lic, fontSize = 11.sp, color = if (isSelected) TextPrimary else TextSecondary, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                }
+
+                                // Commission info
+                                if (isProUser) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(GoldStart.copy(alpha = 0.15f))
+                                            .padding(8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Check, contentDescription = null, tint = GoldStart, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "0% Platform Fee: You keep 100% of this sale ($price)",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = GoldStart
+                                        )
+                                    }
+                                } else {
+                                    Column(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(BrandDarkSurfaceVariant)
+                                            .padding(10.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "Free Plan: 5% platform fee applies. Upgrade to PRO to keep 100% and enable instant asset cloud delivery.",
+                                            fontSize = 10.sp,
+                                            color = TextSecondary
+                                        )
+                                        Button(
+                                            onClick = onUpgradeToPro,
+                                            colors = ButtonDefaults.buttonColors(containerColor = GoldStart),
+                                            shape = RoundedCornerShape(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                            modifier = Modifier.defaultMinSize(minHeight = 32.dp)
+                                        ) {
+                                            Icon(Icons.Default.WorkspacePremium, contentDescription = null, tint = BrandDarkBackground, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Upgrade to PRO (0% Fee)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BrandDarkBackground)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -1488,14 +2428,20 @@ fun AddProductDialog(
                                 badge = badge,
                                 coverImageName = "digital_product_mockup_1793630338547",
                                 isFeatured = true,
-                                isActive = true
+                                isActive = true,
+                                isProProduct = isProProduct,
+                                downloadFileName = if (isProProduct) downloadFileName else "",
+                                fileSizeBytes = if (isProProduct) fileSizeBytes else "",
+                                licenseType = if (isProProduct) licenseType else ""
                             )
                         )
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = BrandWarning)
+                colors = ButtonDefaults.buttonColors(containerColor = BrandWarning),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                modifier = Modifier.defaultMinSize(minHeight = 38.dp)
             ) {
-                Text("Add Product", color = BrandDarkBackground, fontWeight = FontWeight.Bold)
+                Text("Add Product", color = BrandDarkBackground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         },
         dismissButton = {

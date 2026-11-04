@@ -26,5 +26,10 @@ data class LinkItem(
     val isFeatured: Boolean = false,
     val isActive: Boolean = true,
     val orderIndex: Int = 0,
-    val totalClicks: Int = 0
+    val totalClicks: Int = 0,
+    val isProProduct: Boolean = false,
+    val downloadFileName: String = "",
+    val fileSizeBytes: String = "",
+    val licenseType: String = ""
 )
+

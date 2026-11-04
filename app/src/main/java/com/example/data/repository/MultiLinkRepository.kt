@@ -127,7 +127,11 @@ class MultiLinkRepository(private val dao: MultiLinkDao) {
                     isFeatured = true,
                     isActive = true,
                     orderIndex = 0,
-                    totalClicks = 342
+                    totalClicks = 342,
+                    isProProduct = true,
+                    downloadFileName = "cyberpunk_toolkit_2026.zip",
+                    fileSizeBytes = "1.4 GB",
+                    licenseType = "Commercial & Extended Use"
                 ),
                 // Business: Service
                 LinkItem(

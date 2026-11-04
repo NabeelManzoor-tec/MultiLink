@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -23,13 +24,13 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCode
@@ -197,23 +198,28 @@ fun MainNavigationScreen(
                         Button(
                             onClick = { viewModel.setUserRole(UserRole.CREATOR) },
                             colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.testTag("switch_to_creator_topbar_button")
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier
+                                .height(32.dp)
+                                .testTag("switch_to_creator_topbar_button")
                         ) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(13.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Creator Mode", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
 
                         IconButton(
                             onClick = { showAccountDialog = true },
-                            modifier = Modifier.testTag("customer_account_icon_button")
+                            modifier = Modifier
+                                .size(36.dp)
+                                .testTag("customer_account_icon_button")
                         ) {
                             Icon(
                                 Icons.Default.AccountCircle,
                                 contentDescription = "Account Settings",
                                 tint = BrandSecondary,
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(26.dp)
                             )
                         }
                     },
@@ -289,11 +295,13 @@ fun MainNavigationScreen(
                         if (profile?.isProUser == true) {
                             Box(
                                 modifier = Modifier
-                                    .padding(end = 6.dp)
+                                    .padding(end = 4.dp)
+                                    .height(30.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(GoldStart)
                                     .clickable { viewModel.selectTab(AppTab.MONETIZE) }
-                                    .padding(horizontal = 7.dp, vertical = 4.dp)
+                                    .padding(horizontal = 7.dp),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.WorkspacePremium, contentDescription = null, tint = BrandDarkBackground, modifier = Modifier.size(13.dp))
@@ -306,33 +314,37 @@ fun MainNavigationScreen(
                         Button(
                             onClick = { viewModel.setPublicVisitorMode(true) },
                             colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                             modifier = Modifier
-                                .padding(end = 4.dp)
+                                .height(32.dp)
+                                .padding(end = 2.dp)
                                 .testTag("toggle_live_view_button")
                         ) {
                             Icon(
                                 Icons.Default.Visibility,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Live Page",
-                                fontSize = 12.sp,
+                                text = "Live",
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
 
                         IconButton(
                             onClick = { showAccountDialog = true },
-                            modifier = Modifier.testTag("account_menu_button")
+                            modifier = Modifier
+                                .size(36.dp)
+                                .testTag("account_menu_button")
                         ) {
                             Icon(
                                 Icons.Default.AccountCircle,
                                 contentDescription = "Account Settings",
                                 tint = if (currentUser != null) BrandSuccess else TextSecondary,
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(26.dp)
                             )
                         }
                     },
@@ -443,8 +455,8 @@ fun MainNavigationScreen(
                                 onUpdatePayouts = { stripeOk, paypal, cashapp, bmac, preferred ->
                                     viewModel.updatePayoutSettings(stripeOk, paypal, cashapp, bmac, preferred)
                                 },
-                                onUpgradeToPro = { tier ->
-                                    viewModel.upgradeToPro(tier)
+                                onUpgradeToPro = { tier, paymentMethod, renewalDate ->
+                                    viewModel.upgradeToPro(tier, paymentMethod, renewalDate)
                                 },
                                 onCancelPro = {
                                     viewModel.cancelProSubscription()
@@ -684,7 +696,7 @@ fun AccountDetailsDialog(
                             .height(44.dp)
                             .testTag("open_sign_in_button")
                     ) {
-                        Icon(Icons.Default.Login, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.AutoMirrored.Filled.Login, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Sign In / Sign Up with Google", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }

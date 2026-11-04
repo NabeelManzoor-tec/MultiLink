@@ -16,7 +16,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -209,57 +212,66 @@ fun CustomerHubScreen(
 
         // Customer Navigation Tabs
         item {
-            Row(
+            LazyRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 2.dp)
             ) {
-                FilterChip(
-                    selected = selectedTab == "LIBRARY",
-                    onClick = { selectedTab = "LIBRARY" },
-                    label = { Text("My Library & Products") },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = BrandWarning.copy(alpha = 0.25f),
-                        selectedLabelColor = BrandWarning,
-                        containerColor = BrandDarkSurface,
-                        labelColor = TextSecondary
+                item {
+                    FilterChip(
+                        selected = selectedTab == "LIBRARY",
+                        onClick = { selectedTab = "LIBRARY" },
+                        label = { Text("My Library & Products") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = BrandWarning.copy(alpha = 0.25f),
+                            selectedLabelColor = BrandWarning,
+                            containerColor = BrandDarkSurface,
+                            labelColor = TextSecondary
+                        )
                     )
-                )
+                }
 
-                FilterChip(
-                    selected = selectedTab == "SESSIONS",
-                    onClick = { selectedTab = "SESSIONS" },
-                    label = { Text("Booked Calls") },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = BrandPrimary.copy(alpha = 0.25f),
-                        selectedLabelColor = BrandPrimary,
-                        containerColor = BrandDarkSurface,
-                        labelColor = TextSecondary
+                item {
+                    FilterChip(
+                        selected = selectedTab == "SESSIONS",
+                        onClick = { selectedTab = "SESSIONS" },
+                        label = { Text("Booked Calls") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = BrandPrimary.copy(alpha = 0.25f),
+                            selectedLabelColor = BrandPrimary,
+                            containerColor = BrandDarkSurface,
+                            labelColor = TextSecondary
+                        )
                     )
-                )
+                }
 
-                FilterChip(
-                    selected = selectedTab == "PAYMENTS",
-                    onClick = { selectedTab = "PAYMENTS" },
-                    label = { Text("Payment Methods & Tips") },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = BrandSuccess.copy(alpha = 0.25f),
-                        selectedLabelColor = BrandSuccess,
-                        containerColor = BrandDarkSurface,
-                        labelColor = TextSecondary
+                item {
+                    FilterChip(
+                        selected = selectedTab == "PAYMENTS",
+                        onClick = { selectedTab = "PAYMENTS" },
+                        label = { Text("Payment Methods & Tips") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = BrandSuccess.copy(alpha = 0.25f),
+                            selectedLabelColor = BrandSuccess,
+                            containerColor = BrandDarkSurface,
+                            labelColor = TextSecondary
+                        )
                     )
-                )
+                }
 
-                FilterChip(
-                    selected = selectedTab == "DISCOVER",
-                    onClick = { selectedTab = "DISCOVER" },
-                    label = { Text("Explore Creators") },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = BrandSecondary.copy(alpha = 0.25f),
-                        selectedLabelColor = BrandSecondary,
-                        containerColor = BrandDarkSurface,
-                        labelColor = TextSecondary
+                item {
+                    FilterChip(
+                        selected = selectedTab == "DISCOVER",
+                        onClick = { selectedTab = "DISCOVER" },
+                        label = { Text("Explore Creators") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = BrandSecondary.copy(alpha = 0.25f),
+                            selectedLabelColor = BrandSecondary,
+                            containerColor = BrandDarkSurface,
+                            labelColor = TextSecondary
+                        )
                     )
-                )
+                }
             }
         }
 
@@ -424,13 +436,13 @@ fun CustomerHubScreen(
                     ) {
                         Column {
                             Text(
-                                text = "Saved Payment Methods",
+                                text = "Live Payment Gateways & Banking",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
                             )
                             Text(
-                                text = "Used for 1-tap tipping & digital checkout",
+                                text = "Connected to live bank deduction & encrypted checkout",
                                 fontSize = 11.sp,
                                 color = TextSecondary
                             )
@@ -578,7 +590,7 @@ fun CustomerHubScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text("Transaction ID: #TIP-98217", fontSize = 10.sp, color = TextMuted)
-                                Text("0% Platform Fee", fontSize = 10.sp, color = BrandSuccess, fontWeight = FontWeight.Bold)
+                                Text("LIVE BANK SETTLED • 0% Fee", fontSize = 10.sp, color = BrandSuccess, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -639,7 +651,9 @@ fun CustomerHubScreen(
                             Button(
                                 onClick = onViewCreatorLandingPage,
                                 colors = ButtonDefaults.buttonColors(containerColor = BrandSecondary),
-                                shape = RoundedCornerShape(10.dp)
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                modifier = Modifier.defaultMinSize(minHeight = 36.dp)
                             ) {
                                 Text("Visit Page", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BrandDarkBackground)
                             }
@@ -667,7 +681,7 @@ fun CustomerHubScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                         Text(
                             text = "Are you a Creator?",
                             fontSize = 14.sp,
@@ -684,7 +698,9 @@ fun CustomerHubScreen(
                     Button(
                         onClick = onSwitchToCreatorMode,
                         colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.defaultMinSize(minHeight = 36.dp)
                     ) {
                         Text("Creator Studio", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }

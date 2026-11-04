@@ -12,8 +12,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -194,22 +196,30 @@ fun QrStudioScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f).testTag("share_qr_button")
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 38.dp)
+                        .testTag("share_qr_button")
                 ) {
-                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Share", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(15.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Share", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 }
 
                 Button(
                     onClick = onTestScan,
                     colors = ButtonDefaults.buttonColors(containerColor = BrandSecondary),
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f).testTag("test_qr_scan_button")
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 38.dp)
+                        .testTag("test_qr_scan_button")
                 ) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp), tint = BrandDarkBackground)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Test Scan", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BrandDarkBackground)
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(15.dp), tint = BrandDarkBackground)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Test Scan", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BrandDarkBackground, maxLines = 1)
                 }
 
                 OutlinedButton(
@@ -219,11 +229,15 @@ fun QrStudioScreen(
                         Toast.makeText(context, "Bio URL copied!", Toast.LENGTH_SHORT).show()
                     },
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f).testTag("copy_bio_url_button")
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 38.dp)
+                        .testTag("copy_bio_url_button")
                 ) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(15.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Copy", fontSize = 12.sp)
+                    Text("Copy", fontSize = 11.sp, maxLines = 1)
                 }
             }
         }

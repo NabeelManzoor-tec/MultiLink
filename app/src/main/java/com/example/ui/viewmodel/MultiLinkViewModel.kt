@@ -175,6 +175,32 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
                 device = device,
                 revenue = revenue
             )
+            // If visitor made a tip contribution, automatically reflect in tipGoalCurrent
+            if (revenue > 0.0 && link.category == LinkCategory.TIP) {
+                val current = profile.value
+                if (current != null) {
+                    val updated = current.copy(tipGoalCurrent = current.tipGoalCurrent + revenue)
+                    repository.saveProfile(updated)
+                }
+            }
+        }
+    }
+
+    fun recordProductPurchase(
+        product: LinkItem,
+        amount: Double,
+        paymentMethod: String,
+        country: String = "United States",
+        device: String = "Mobile (Android)"
+    ) {
+        viewModelScope.launch {
+            repository.recordClick(
+                link = product,
+                source = "Product Checkout ($paymentMethod)",
+                country = country,
+                device = device,
+                revenue = amount
+            )
         }
     }
 
@@ -208,12 +234,18 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun upgradeToPro(tier: String) {
+    fun upgradeToPro(
+        tier: String,
+        paymentMethod: String = "Google Play In-App Billing",
+        renewalDate: String = "Nov 3, 2027"
+    ) {
         viewModelScope.launch {
             val current = profile.value ?: return@launch
             val updated = current.copy(
                 isProUser = true,
-                proPlanTier = tier
+                proPlanTier = tier,
+                proPaymentMethod = paymentMethod,
+                proSubscriptionRenewalDate = renewalDate
             )
             repository.saveProfile(updated)
         }
@@ -224,7 +256,9 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
             val current = profile.value ?: return@launch
             val updated = current.copy(
                 isProUser = false,
-                proPlanTier = "FREE"
+                proPlanTier = "FREE",
+                proPaymentMethod = "",
+                proSubscriptionRenewalDate = ""
             )
             repository.saveProfile(updated)
         }
