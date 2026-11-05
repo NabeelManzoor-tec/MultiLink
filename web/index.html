@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MultiLink | Creator Hub</title>
+  <meta name="description" content="All-in-one creator links, digital products, and fan support page.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="CYBER_NEON">
+  <!-- Top Navigation & Share Trigger -->
+  <nav class="top-nav">
+    <div class="brand-pill-mini">
+      <span class="brand-sparkle">✦</span> MultiLink
+    </div>
+    <button id="topShareBtn" class="top-share-btn" aria-label="Share Linktree">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="18" cy="5" r="3"></circle>
+        <circle cx="6" cy="12" r="3"></circle>
+        <circle cx="18" cy="19" r="3"></circle>
+        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+      </svg>
+    </button>
+  </nav>
+
+  <main class="page-container">
+    <!-- Profile Header -->
+    <header class="profile-header">
+      <div class="avatar-wrapper">
+        <div class="avatar-glow-ring"></div>
+        <img id="creatorAvatar" class="avatar-img" src="images/creator_avatar_default_1793630325308.jpg" alt="Creator Avatar">
+        <div id="verifiedBadge" class="verified-badge" title="Verified PRO Creator">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="creator-identity">
+        <h1 id="creatorName" class="display-name">Alexa Rivers</h1>
+        <div id="creatorHandle" class="handle-badge">@alexa_aura</div>
+      </div>
+
+      <p id="creatorBio" class="bio-text">
+        Creating next-gen cyberpunk shaders, 3D toolkits & mentoring ambitious indie creators worldwide 🚀
+      </p>
+
+      <!-- Social Icons Ribbon (Linktree standard) -->
+      <div id="socialRibbon" class="social-ribbon">
+        <!-- Injected via JavaScript -->
+      </div>
+    </header>
+
+    <!-- Support / Tip Jar Goal Card -->
+    <section id="tipSection" class="tip-card">
+      <div class="tip-card-inner">
+        <div class="tip-header">
+          <div class="tip-title-box">
+            <span class="tip-icon">☕</span>
+            <div>
+              <div class="tip-title" id="tipGoalTitle">4K Unreal 5 Render Cluster</div>
+              <div class="tip-subtitle">Directly fuel independent tutorials & assets</div>
+            </div>
+          </div>
+          <button id="openTipBtn" class="tip-action-btn">Send Tip</button>
+        </div>
+
+        <div class="tip-progress-container">
+          <div class="tip-progress-bar-bg">
+            <div id="tipProgressBar" class="tip-progress-fill" style="width: 73.6%;"></div>
+          </div>
+          <div class="tip-stats">
+            <span id="tipGoalAmount" class="tip-stat-highlight">$1,840.00 raised</span>
+            <span id="tipGoalTarget">Goal: $2,500.00</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Digital Products Section -->
+    <section id="productsSection" class="section-container">
+      <div id="productsHeader" class="section-title">
+        <span>Digital Store & Assets</span>
+        <span class="section-tag">Instant Delivery</span>
+      </div>
+      <div id="productsList" class="links-list">
+        <!-- Injected via JavaScript -->
+      </div>
+    </section>
+
+    <!-- Links Section -->
+    <section class="section-container">
+      <div class="section-title">
+        <span>Featured Links</span>
+        <span class="section-tag">Connect</span>
+      </div>
+      <div id="linksList" class="links-list">
+        <!-- Injected via JavaScript -->
+      </div>
+    </section>
+
+    <!-- Community & Newsletter Capture Card -->
+    <section class="newsletter-card">
+      <div class="newsletter-header">
+        <span class="newsletter-badge">VIP INSIDER</span>
+        <h3 class="newsletter-title">Join The Creator Circle</h3>
+        <p class="newsletter-desc">Get free weekly GLSL shader source codes, private devlogs, and instant notification for new asset drops.</p>
+      </div>
+      <form id="newsletterForm" class="newsletter-form" onsubmit="return false;">
+        <input type="email" id="newsletterEmail" class="newsletter-input" placeholder="Enter your email address" required>
+        <button type="submit" id="newsletterSubmitBtn" class="newsletter-btn">Subscribe Free</button>
+      </form>
+      <div id="newsletterSuccess" class="newsletter-success" style="display: none;">
+        ✓ You're in! Check your inbox for the welcome pack.
+      </div>
+    </section>
+
+    <!-- Footer Branding (Linktree iconic badge) -->
+    <footer class="footer-container">
+      <a href="#" id="createLinktreeBtn" class="footer-badge">
+        <span class="footer-logo">✦</span>
+        <span>Create your own <strong>MultiLink</strong></span>
+      </a>
+      <div class="footer-links">
+        <span id="syncStatus">Live Synced</span>
+        <span>•</span>
+        <a href="#" id="footerShareBtn">Share</a>
+        <span>•</span>
+        <a href="#" id="footerReportBtn">Report</a>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Interactive Media Embed Modal -->
+  <div id="mediaModal" class="modal-overlay">
+    <div class="modal-card modal-card-wide">
+      <div class="modal-header">
+        <h3 id="mediaModalTitle" style="font-size: 16px; font-weight: 700;">Media Preview</h3>
+        <button id="closeMediaModal" class="modal-close" aria-label="Close modal">&times;</button>
+      </div>
+      <div id="mediaContainer" class="media-container">
+        <!-- Injected iframe or player -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Tip Modal Dialog -->
+  <div id="tipModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 20px;">☕</span>
+          <h3 style="font-size: 18px; font-weight: 800;">Support Creator</h3>
+        </div>
+        <button id="closeTipModal" class="modal-close" aria-label="Close modal">&times;</button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">
+        Your tip directly supports new open-source 3D tools, YouTube breakdowns & community assets.
+      </p>
+
+      <div class="tip-amounts">
+        <button class="amount-btn" data-amount="3">$3</button>
+        <button class="amount-btn selected" data-amount="5">$5</button>
+        <button class="amount-btn" data-amount="10">$10</button>
+        <button class="amount-btn" data-amount="25">$25</button>
+      </div>
+
+      <div class="input-group">
+        <label for="customTipInput" class="input-label">Custom Amount</label>
+        <input type="number" id="customTipInput" class="text-input" placeholder="Custom $ amount (e.g. 50)" min="1" step="1">
+      </div>
+
+      <div class="input-group">
+        <label for="tipDonorMessage" class="input-label">Words of Encouragement (Optional)</label>
+        <input type="text" id="tipDonorMessage" class="text-input" placeholder="Say something nice...">
+      </div>
+
+      <button id="confirmTipBtn" class="pay-btn">Send $5 Tip ☕</button>
+    </div>
+  </div>
+
+  <!-- Digital Product Modal Dialog -->
+  <div id="productModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalProductTitle" style="font-size: 18px; font-weight: 800;">Product Checkout</h3>
+        <button id="closeProductModal" class="modal-close" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="product-modal-hero">
+        <img id="modalProductImg" src="images/digital_product_mockup_1793630338547.jpg" alt="Product Cover" class="product-cover-preview">
+        <div class="product-modal-details">
+          <p id="modalProductDesc" style="font-size: 13px; color: var(--text-muted);"></p>
+          <div class="product-feature-tag">Instant Delivery • Lifetime License</div>
+        </div>
+      </div>
+
+      <div class="price-summary-box">
+        <span style="font-size: 14px; font-weight: 600;">Total Price</span>
+        <span id="modalProductPrice" style="font-size: 18px; font-weight: 800; color: var(--accent-color);">$39.00</span>
+      </div>
+
+      <button id="confirmPurchaseBtn" class="pay-btn">Instant Download & License</button>
+    </div>
+  </div>
+
+  <!-- Linktree Share Sheet / Drawer -->
+  <div id="shareModal" class="modal-overlay">
+    <div class="modal-card modal-share-card">
+      <div class="modal-header">
+        <h3 style="font-size: 18px; font-weight: 800;">Share Linktree</h3>
+        <button id="closeShareModal" class="modal-close" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="share-profile-snippet">
+        <img id="shareAvatarSnippet" src="images/creator_avatar_default_1793630325308.jpg" alt="Avatar" class="avatar-tiny">
+        <div style="text-align: left;">
+          <div id="shareNameSnippet" style="font-weight: 700; font-size: 14px;">Alexa Rivers</div>
+          <div id="shareHandleSnippet" style="font-size: 12px; color: var(--text-muted);">@alexa_aura</div>
+        </div>
+      </div>
+
+      <div class="qr-container">
+        <div id="qrcodeBox" class="qr-box">
+          <img id="qrImage" alt="QR Code" class="qr-img">
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Scan to open on any mobile device</p>
+      </div>
+
+      <div class="share-actions-row">
+        <button id="nativeShareBtn" class="share-action-btn">
+          <span>📤</span>
+          <span>Share via...</span>
+        </button>
+        <button id="copyShareUrlBtn" class="share-action-btn primary">
+          <span>📋</span>
+          <span id="copyBtnLabel">Copy Link</span>
+        </button>
+      </div>
+
+      <input type="text" id="shareUrlInput" readonly class="text-input text-center">
+    </div>
+  </div>
+
+  <!-- Confetti Canvas for Celebration -->
+  <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
+
+  <!-- Script Modules -->
+  <script src="app.js"></script>
+</body>
+</html>

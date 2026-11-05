@@ -23,6 +23,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.Logout
@@ -30,14 +37,21 @@ import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MonetizationOn
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -92,6 +106,10 @@ import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.ui.viewmodel.AppTab
 import com.example.ui.viewmodel.MultiLinkViewModel
+import com.example.data.update.AppUpdateData
+import com.example.data.update.AppUpdateState
+import com.example.ui.components.AppUpdateBannerCard
+import com.example.ui.components.AppUpdateNotificationDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,7 +136,12 @@ fun MainNavigationScreen(
     val showAuthScreen by viewModel.showAuthScreen.collectAsStateWithLifecycle()
     val isGuestMode by viewModel.isGuestMode.collectAsStateWithLifecycle()
 
+    val appUpdateState by viewModel.appUpdateState.collectAsStateWithLifecycle()
+    val isUpdateDialogVisible by viewModel.isUpdateDialogVisible.collectAsStateWithLifecycle()
+
     var showAccountDialog by remember { mutableStateOf(false) }
+    var showWebPreviewDialog by remember { mutableStateOf(false) }
+    var showFullscreenWebViewer by remember { mutableStateOf(false) }
 
     if (showAuthScreen) {
         AuthScreen(
@@ -130,6 +153,22 @@ fun MainNavigationScreen(
                 viewModel.setGuestMode(true, role)
                 Toast.makeText(context, "Browsing in guest mode", Toast.LENGTH_SHORT).show()
             }
+        )
+    } else if (showFullscreenWebViewer && profile != null) {
+        FullscreenWebViewerScreen(
+            profile = profile!!,
+            links = allLinks,
+            onRecordClick = { linkId, title, category, revenue ->
+                val linkItem = allLinks.find { it.id == linkId } ?: com.example.data.model.LinkItem(
+                    id = linkId,
+                    title = title,
+                    url = "#",
+                    category = try { com.example.data.model.LinkCategory.valueOf(category) } catch (e: Exception) { com.example.data.model.LinkCategory.SOCIAL },
+                    iconKey = ""
+                )
+                viewModel.recordVisitorClick(link = linkItem, source = "Web View", revenue = revenue)
+            },
+            onBack = { showFullscreenWebViewer = false }
         )
     } else if (isPublicVisitorMode && profile != null) {
         PublicLandingPageScreen(
@@ -311,6 +350,31 @@ fun MainNavigationScreen(
                             }
                         }
 
+                        OutlinedButton(
+                            onClick = { showFullscreenWebViewer = true },
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BrandSecondary),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier
+                                .height(32.dp)
+                                .padding(end = 4.dp)
+                                .testTag("open_web_preview_button")
+                        ) {
+                            Icon(
+                                Icons.Default.Language,
+                                contentDescription = null,
+                                tint = BrandSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "Web",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BrandSecondary
+                            )
+                        }
+
                         Button(
                             onClick = { viewModel.setPublicVisitorMode(true) },
                             colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
@@ -423,12 +487,31 @@ fun MainNavigationScreen(
                 }
             }
         ) { paddingValues ->
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                Crossfade(targetState = currentTab, label = "tab_transition") { tab ->
+                if (appUpdateState is AppUpdateState.Available) {
+                    val updateData = (appUpdateState as AppUpdateState.Available).updateData
+                    AppUpdateBannerCard(
+                        updateData = updateData,
+                        onUpdateClick = {
+                            viewModel.launchPlayStoreUpdate(context as? android.app.Activity)
+                        },
+                        onDismiss = {
+                            viewModel.dismissUpdateDialog()
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    Crossfade(targetState = currentTab, label = "tab_transition") { tab ->
                     when (tab) {
                         AppTab.LINKS -> {
                             LinksScreen(
@@ -448,6 +531,7 @@ fun MainNavigationScreen(
                                 profile = profile,
                                 links = allLinks,
                                 totalRevenue = totalRevenue,
+                                playBillingManager = viewModel.playBillingManager,
                                 onAddLink = { viewModel.addLink(it) },
                                 onDeleteLink = { viewModel.deleteLink(it) },
                                 onToggleActive = { id, active -> viewModel.toggleLinkActive(id, active) },
@@ -455,8 +539,8 @@ fun MainNavigationScreen(
                                 onUpdatePayouts = { stripeOk, paypal, cashapp, bmac, preferred ->
                                     viewModel.updatePayoutSettings(stripeOk, paypal, cashapp, bmac, preferred)
                                 },
-                                onUpgradeToPro = { tier, paymentMethod, renewalDate ->
-                                    viewModel.upgradeToPro(tier, paymentMethod, renewalDate)
+                                onUpgradeToPro = { tier, paymentMethod, renewalDate, token, orderId ->
+                                    viewModel.upgradeToPro(tier, paymentMethod, renewalDate, token, orderId)
                                 },
                                 onCancelPro = {
                                     viewModel.cancelProSubscription()
@@ -487,6 +571,7 @@ fun MainNavigationScreen(
             }
         }
     }
+}
 
     // Account & Role Switcher Dialog
     if (showAccountDialog) {
@@ -494,6 +579,8 @@ fun MainNavigationScreen(
             currentUser = currentUser,
             currentRole = userRole,
             profile = profile,
+            appUpdateState = appUpdateState,
+            versionName = viewModel.appUpdateManager.currentVersionName,
             onDismiss = { showAccountDialog = false },
             onSwitchRole = { newRole ->
                 viewModel.setUserRole(newRole)
@@ -508,12 +595,48 @@ fun MainNavigationScreen(
                 showAccountDialog = false
                 viewModel.selectTab(AppTab.MONETIZE)
             },
+            onCheckForUpdates = {
+                viewModel.checkForUpdatesManually()
+                Toast.makeText(context, "Checking for updates on Google Play...", Toast.LENGTH_SHORT).show()
+            },
+            onOpenUpdateDialog = {
+                viewModel.showUpdateDialog()
+            },
             onSignOut = {
                 AuthManager.signOut(context, credentialManager, onComplete = {
                     viewModel.setGuestMode(true)
                     showAccountDialog = false
                     Toast.makeText(context, "Signed out successfully", Toast.LENGTH_SHORT).show()
                 }, scope = coroutineScope)
+            }
+        )
+    }
+
+    if (showWebPreviewDialog && profile != null) {
+        WebPreviewDialog(
+            profile = profile!!,
+            onDismiss = { showWebPreviewDialog = false },
+            onSyncNow = {
+                viewModel.syncNowToWebCloud()
+                Toast.makeText(context, "Cloud synced with Firestore!", Toast.LENGTH_SHORT).show()
+            },
+            onOpenFullscreen = {
+                showWebPreviewDialog = false
+                showFullscreenWebViewer = true
+            }
+        )
+    }
+
+    if (isUpdateDialogVisible && appUpdateState is AppUpdateState.Available) {
+        val updateData = (appUpdateState as AppUpdateState.Available).updateData
+        AppUpdateNotificationDialog(
+            updateData = updateData,
+            currentVersionName = viewModel.appUpdateManager.currentVersionName,
+            onUpdateClick = {
+                viewModel.launchPlayStoreUpdate(context as? android.app.Activity)
+            },
+            onDismiss = {
+                viewModel.dismissUpdateDialog()
             }
         )
     }
@@ -524,10 +647,14 @@ fun AccountDetailsDialog(
     currentUser: com.google.firebase.auth.FirebaseUser?,
     currentRole: UserRole,
     profile: com.example.data.model.CreatorProfile?,
+    appUpdateState: AppUpdateState = AppUpdateState.Idle,
+    versionName: String = "5.0",
     onDismiss: () -> Unit,
     onSwitchRole: (UserRole) -> Unit,
     onOpenSignIn: () -> Unit,
     onUpgradeToPro: () -> Unit,
+    onCheckForUpdates: () -> Unit = {},
+    onOpenUpdateDialog: () -> Unit = {},
     onSignOut: () -> Unit
 ) {
     AlertDialog(
@@ -671,6 +798,77 @@ fun AccountDetailsDialog(
                     )
                 }
 
+                // App Version & Check for Updates Section
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = BrandDarkBackground),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (appUpdateState is AppUpdateState.Available) BrandPrimary else BrandDarkBorder
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "MultiLink",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "v$versionName",
+                                    fontSize = 10.sp,
+                                    color = BrandSecondary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Text(
+                                text = when (appUpdateState) {
+                                    is AppUpdateState.Available -> "Update v${(appUpdateState as AppUpdateState.Available).updateData.latestVersionName} available!"
+                                    is AppUpdateState.Checking -> "Checking for updates..."
+                                    else -> "You're on the latest version"
+                                },
+                                fontSize = 10.sp,
+                                color = if (appUpdateState is AppUpdateState.Available) BrandSuccess else TextMuted
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                if (appUpdateState is AppUpdateState.Available) {
+                                    onOpenUpdateDialog()
+                                } else {
+                                    onCheckForUpdates()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (appUpdateState is AppUpdateState.Available) BrandPrimary else BrandDarkSurfaceVariant
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier
+                                .height(32.dp)
+                                .testTag("check_for_updates_button")
+                        ) {
+                            Text(
+                                text = if (appUpdateState is AppUpdateState.Available) "Update" else "Check",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (appUpdateState is AppUpdateState.Available) BrandDarkBackground else TextPrimary
+                            )
+                        }
+                    }
+                }
+
                 // Sign In or Sign Out Action
                 if (currentUser != null) {
                     Button(
@@ -711,3 +909,161 @@ fun AccountDetailsDialog(
         containerColor = BrandDarkSurface
     )
 }
+
+@Composable
+fun WebPreviewDialog(
+    profile: com.example.data.model.CreatorProfile,
+    onDismiss: () -> Unit,
+    onSyncNow: () -> Unit,
+    onOpenFullscreen: () -> Unit
+) {
+    val context = LocalContext.current
+    val cleanHandle = profile.handle.trim().removePrefix("@").lowercase().ifEmpty { "alexa_aura" }
+    val publicWebUrl = "https://gen-lang-client-0468598937.web.app/?handle=$cleanHandle"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(BrandPrimary.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = null,
+                        tint = BrandPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text("Public Web Version", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Live visitor landing page", fontSize = 11.sp, color = TextSecondary)
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = BrandDarkBackground),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BrandSuccess.copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(BrandSuccess)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Cloud Sync Active • Firebase Firestore",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BrandSuccess
+                        )
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = BrandDarkBackground),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BrandDarkBorder)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Public URL for Fans & Bios:", fontSize = 11.sp, color = TextSecondary)
+                        Text(
+                            text = publicWebUrl,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = BrandSecondary
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("MultiLink Web URL", publicWebUrl)
+                                    clipboard.setPrimaryClip(clip)
+                                    Toast.makeText(context, "Copied public link!", Toast.LENGTH_SHORT).show()
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f).height(36.dp)
+                            ) {
+                                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(13.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Copy", fontSize = 11.sp)
+                            }
+
+                            Button(
+                                onClick = onOpenFullscreen,
+                                colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f).height(36.dp)
+                            ) {
+                                Icon(Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Browser", fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(260.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = BrandDarkBackground),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BrandDarkBorder)
+                ) {
+                    AndroidView(
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                webViewClient = WebViewClient()
+                                loadUrl("file:///android_asset/web/index.html?handle=$cleanHandle")
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                Button(
+                    onClick = onSyncNow,
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandSecondary),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth().height(40.dp)
+                ) {
+                    Icon(Icons.Default.CloudSync, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Sync Now to Firestore", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", color = TextSecondary)
+            }
+        },
+        containerColor = BrandDarkSurface
+    )
+}
+

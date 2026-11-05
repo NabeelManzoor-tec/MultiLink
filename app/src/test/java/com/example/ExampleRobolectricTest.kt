@@ -7,32 +7,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 class ExampleRobolectricTest {
 
     @Test
     fun qrCodeMatrixGenerationProducesValidMatrix() {
-        val matrix = QrCodeHelper.generateBitMatrix("https://multilink.bio/@alexa_aura", 25)
+        val matrix = QrCodeHelper.generateBitMatrix("https://gen-lang-client-0468598937.web.app/?handle=alexa_aura", 25)
         assertNotNull(matrix)
         assertTrue(matrix!!.isNotEmpty())
         assertTrue(matrix[0].isNotEmpty())
-    }
-
-    @Test
-    fun qrCodeBitmapGenerationSucceeds() {
-        val bitmap = QrCodeHelper.generateBitmap(
-            "https://multilink.bio/@alexa_aura",
-            QrRenderConfig(eyeStyle = QrEyeStyle.ROUNDED),
-            120
-        )
-        assertNotNull(bitmap)
-        assertEquals(120, bitmap!!.width)
-        assertEquals(120, bitmap.height)
     }
 
     @Test

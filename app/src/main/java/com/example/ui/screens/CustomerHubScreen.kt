@@ -106,7 +106,7 @@ fun CustomerHubScreen(
                 creatorHandle = "alexa_aura",
                 creatorName = "Alexa Rivers",
                 status = "COMPLETED",
-                downloadUrl = "https://downloads.multilink.bio/pack-2026.zip"
+                downloadUrl = "https://gen-lang-client-0468598937.web.app/downloads/pack-2026.zip"
             ),
             CustomerOrder(
                 id = "ORD-8204",

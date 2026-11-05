@@ -15,12 +15,19 @@ import com.example.ui.components.QrEyeStyle
 import com.example.ui.components.QrRenderConfig
 import com.example.ui.theme.BrandSecondary
 import com.example.ui.theme.BrandDarkBackground
+import com.example.data.billing.BillingStatus
+import com.example.data.billing.PlayBillingManager
+import com.example.data.firebase.FirestoreSyncManager
+import com.example.data.update.AppUpdateManager
+import com.example.data.update.AppUpdateState
+import com.example.data.update.AppUpdateData
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -44,12 +51,39 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
     private val _showAuthScreen = MutableStateFlow(false)
     val showAuthScreen: StateFlow<Boolean> = _showAuthScreen.asStateFlow()
 
+    val playBillingManager = PlayBillingManager(application, viewModelScope)
+    val appUpdateManager = AppUpdateManager(application, viewModelScope)
+    val appUpdateState: StateFlow<AppUpdateState> = appUpdateManager.updateState
+    val isUpdateDialogVisible: StateFlow<Boolean> = appUpdateManager.isUpdateDialogVisible
+
     init {
         val db = MultiLinkDatabase.getDatabase(application)
         repository = MultiLinkRepository(db.multiLinkDao())
         AuthManager.initAuthListener(application, viewModelScope)
         viewModelScope.launch {
             repository.ensureInitialDataSeeded()
+            startCloudSync()
+            appUpdateManager.checkForUpdates(isUserInitiated = false)
+        }
+        viewModelScope.launch {
+            playBillingManager.billingStatus.collect { status ->
+                if (status is BillingStatus.SubscriptionActive) {
+                    val cal = java.util.Calendar.getInstance()
+                    if (status.planTier == "PRO_ANNUAL") {
+                        cal.add(java.util.Calendar.YEAR, 1)
+                    } else {
+                        cal.add(java.util.Calendar.DAY_OF_MONTH, 30)
+                    }
+                    val renewalDate = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.US).format(cal.time)
+                    upgradeToPro(
+                        tier = status.planTier,
+                        paymentMethod = "Google Play In-App Billing",
+                        renewalDate = renewalDate,
+                        purchaseToken = status.purchaseToken,
+                        orderId = status.orderId
+                    )
+                }
+            }
         }
     }
 
@@ -237,7 +271,9 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
     fun upgradeToPro(
         tier: String,
         paymentMethod: String = "Google Play In-App Billing",
-        renewalDate: String = "Nov 3, 2027"
+        renewalDate: String = "Nov 3, 2027",
+        purchaseToken: String = "",
+        orderId: String = ""
     ) {
         viewModelScope.launch {
             val current = profile.value ?: return@launch
@@ -245,7 +281,9 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
                 isProUser = true,
                 proPlanTier = tier,
                 proPaymentMethod = paymentMethod,
-                proSubscriptionRenewalDate = renewalDate
+                proSubscriptionRenewalDate = renewalDate,
+                proPurchaseToken = purchaseToken,
+                proOrderId = orderId
             )
             repository.saveProfile(updated)
         }
@@ -258,7 +296,9 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
                 isProUser = false,
                 proPlanTier = "FREE",
                 proPaymentMethod = "",
-                proSubscriptionRenewalDate = ""
+                proSubscriptionRenewalDate = "",
+                proPurchaseToken = "",
+                proOrderId = ""
             )
             repository.saveProfile(updated)
         }
@@ -282,5 +322,66 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
                 )
             }
         }
+    }
+
+    private fun startCloudSync() {
+        viewModelScope.launch {
+            profile.filterNotNull().collect { prof ->
+                FirestoreSyncManager.syncProfileToFirestore(getApplication(), prof)
+                FirestoreSyncManager.startWebEventListener(getApplication(), prof.handle) { webEvent ->
+                    viewModelScope.launch {
+                        repository.recordExternalClick(webEvent)
+                        if (webEvent.revenueAmount > 0.0 && webEvent.category == LinkCategory.TIP.name) {
+                            val curr = profile.value
+                            if (curr != null) {
+                                repository.saveProfile(curr.copy(tipGoalCurrent = curr.tipGoalCurrent + webEvent.revenueAmount))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            allLinks.collect { links ->
+                val handle = profile.value?.handle ?: "alexa_aura"
+                if (links.isNotEmpty()) {
+                    FirestoreSyncManager.syncLinksToFirestore(getApplication(), handle, links)
+                }
+            }
+        }
+    }
+
+    fun syncNowToWebCloud() {
+        viewModelScope.launch {
+            val prof = profile.value ?: return@launch
+            FirestoreSyncManager.syncProfileToFirestore(getApplication(), prof)
+            val links = allLinks.value
+            if (links.isNotEmpty()) {
+                FirestoreSyncManager.syncLinksToFirestore(getApplication(), prof.handle, links)
+            }
+        }
+    }
+
+    fun checkForUpdatesManually() {
+        appUpdateManager.checkForUpdates(isUserInitiated = true)
+    }
+
+    fun dismissUpdateDialog() {
+        appUpdateManager.dismissUpdateDialog()
+    }
+
+    fun showUpdateDialog() {
+        appUpdateManager.showUpdateDialog()
+    }
+
+    fun launchPlayStoreUpdate(activity: android.app.Activity? = null) {
+        appUpdateManager.launchPlayStoreUpdate(activity)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        FirestoreSyncManager.stopWebEventListener()
+        playBillingManager.destroy()
     }
 }

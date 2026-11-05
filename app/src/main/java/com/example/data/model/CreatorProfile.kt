@@ -14,7 +14,7 @@ data class CreatorProfile(
     val location: String = "Tokyo & San Francisco",
     val isVerified: Boolean = true,
     val themeId: String = "CYBER_NEON",
-    val customDomain: String = "multilink.bio/@alexa_aura",
+    val customDomain: String = "gen-lang-client-0468598937.web.app/?handle=alexa_aura",
     val tipGoalTitle: String = "New Unreal 5 Rendering Rig",
     val tipGoalCurrent: Double = 1420.0,
     val tipGoalTarget: Double = 2500.0,
@@ -29,5 +29,7 @@ data class CreatorProfile(
     val isProUser: Boolean = false,
     val proPlanTier: String = "FREE", // "FREE", "PRO_MONTHLY", "PRO_ANNUAL"
     val proPaymentMethod: String = "",
-    val proSubscriptionRenewalDate: String = ""
+    val proSubscriptionRenewalDate: String = "",
+    val proPurchaseToken: String = "",
+    val proOrderId: String = ""
 )

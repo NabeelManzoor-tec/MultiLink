@@ -28,11 +28,23 @@ service cloud.firestore {
         allow read: if true;
         allow write: if isOwner(userId);
       }
+
+      match /events/{eventId} {
+        allow read: if isOwner(userId);
+        allow create: if true;
+      }
     }
 
     match /public_profiles/{handle} {
-      allow read: if true;
-      allow write: if isAuthenticated();
+      allow read, write: if true;
+
+      match /links/{linkId} {
+        allow read, write: if true;
+      }
+
+      match /events/{eventId} {
+        allow read, create: if true;
+      }
     }
   }
 }

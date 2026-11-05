@@ -67,6 +67,13 @@ class MultiLinkRepository(private val dao: MultiLinkDao) {
         dao.insertClickEvent(event)
     }
 
+    suspend fun recordExternalClick(event: ClickEvent) {
+        if (event.linkId > 0) {
+            dao.incrementLinkClicks(event.linkId)
+        }
+        dao.insertClickEvent(event)
+    }
+
     suspend fun simulateLiveVisitorClick() {
         val links = dao.getAllLinks().firstOrNull() ?: return
         if (links.isEmpty()) return
@@ -106,7 +113,7 @@ class MultiLinkRepository(private val dao: MultiLinkDao) {
                     location = "Tokyo & San Francisco",
                     isVerified = true,
                     themeId = "CYBER_NEON",
-                    customDomain = "multilink.bio/@alexa_aura",
+                    customDomain = "gen-lang-client-0468598937.web.app/?handle=alexa_aura",
                     tipGoalTitle = "4K Unreal 5 Render Cluster",
                     tipGoalCurrent = 1840.0,
                     tipGoalTarget = 2500.0

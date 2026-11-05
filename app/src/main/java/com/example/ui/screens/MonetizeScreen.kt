@@ -1,6 +1,9 @@
 package com.example.ui.screens
 
+import android.app.Activity
 import android.widget.Toast
+import com.example.data.billing.BillingStatus
+import com.example.data.billing.PlayBillingManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,11 +40,13 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Coffee
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalMall
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MonetizationOn
@@ -51,6 +56,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -68,6 +74,8 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -111,12 +119,13 @@ fun MonetizeScreen(
     profile: CreatorProfile?,
     links: List<LinkItem>,
     totalRevenue: Double,
+    playBillingManager: PlayBillingManager? = null,
     onAddLink: (LinkItem) -> Unit,
     onDeleteLink: (LinkItem) -> Unit,
     onToggleActive: (Long, Boolean) -> Unit,
     onSimulateTip: () -> Unit,
     onUpdatePayouts: (Boolean, String, String, String, String) -> Unit = { _, _, _, _, _ -> },
-    onUpgradeToPro: (String, String, String) -> Unit = { _, _, _ -> },
+    onUpgradeToPro: (tier: String, paymentMethod: String, renewalDate: String, token: String, orderId: String) -> Unit = { _, _, _, _, _ -> },
     onCancelPro: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -341,15 +350,17 @@ fun MonetizeScreen(
             currentTier = profile?.proPlanTier ?: "FREE",
             currentPaymentMethod = profile?.proPaymentMethod ?: "",
             currentRenewalDate = profile?.proSubscriptionRenewalDate ?: "",
+            proOrderId = profile?.proOrderId ?: "",
+            playBillingManager = playBillingManager,
             onDismiss = { showProUpgradeDialog = false },
-            onProcessPaymentAndUpgrade = { tier, paymentMethod, renewalDate, amount, txRef ->
-                onUpgradeToPro(tier, paymentMethod, renewalDate)
+            onSubscriptionPurchased = { tier, paymentMethod, renewalDate, amount, token, orderId ->
+                onUpgradeToPro(tier, paymentMethod, renewalDate, token, orderId)
                 showProUpgradeDialog = false
                 lastSubscribedPlanTier = tier
                 lastSubscribedPaymentMethod = paymentMethod
                 lastSubscribedAmount = amount
                 lastSubscribedRenewalDate = renewalDate
-                lastTransactionRef = txRef
+                lastTransactionRef = orderId
                 showProSuccessReceiptDialog = true
             },
             onCancelSubscription = {
@@ -1365,43 +1376,59 @@ fun ProUpgradeDialog(
     currentTier: String,
     currentPaymentMethod: String = "",
     currentRenewalDate: String = "",
+    proOrderId: String = "",
+    playBillingManager: PlayBillingManager?,
     onDismiss: () -> Unit,
-    onProcessPaymentAndUpgrade: (tier: String, paymentMethod: String, renewalDate: String, amount: Double, txRef: String) -> Unit,
+    onSubscriptionPurchased: (tier: String, paymentMethod: String, renewalDate: String, amount: Double, token: String, orderId: String) -> Unit,
     onCancelSubscription: () -> Unit
 ) {
     var selectedPlan by remember { mutableStateOf(if (currentTier == "PRO_MONTHLY") "PRO_MONTHLY" else "PRO_ANNUAL") }
-    var selectedPaymentMethod by remember {
-        mutableStateOf(
-            if (currentPaymentMethod.contains("Card", ignoreCase = true)) "Credit / Debit Card"
-            else if (currentPaymentMethod.contains("PayPal", ignoreCase = true)) "PayPal"
-            else "Google Play"
-        )
-    }
-
-    var cardNumber by remember { mutableStateOf("") }
-    var cardExpiry by remember { mutableStateOf("") }
-    var cardCvc by remember { mutableStateOf("") }
-    var cardHolder by remember { mutableStateOf("") }
-    var paypalEmail by remember { mutableStateOf("") }
     var isProcessing by remember { mutableStateOf(false) }
+    var billingErrorMessage by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val billingStatus by (playBillingManager?.billingStatus ?: remember { kotlinx.coroutines.flow.MutableStateFlow(BillingStatus.Idle) }).collectAsState()
+
+    LaunchedEffect(billingStatus) {
+        when (val status = billingStatus) {
+            is BillingStatus.SubscriptionActive -> {
+                isProcessing = false
+                val cal = java.util.Calendar.getInstance()
+                if (status.tier == "PRO_ANNUAL") {
+                    cal.add(java.util.Calendar.YEAR, 1)
+                } else {
+                    cal.add(java.util.Calendar.DAY_OF_MONTH, 30)
+                }
+                val renewalDateStr = SimpleDateFormat("MMM d, yyyy", Locale.US).format(cal.time)
+                onSubscriptionPurchased(
+                    status.tier,
+                    "Google Play In-App Billing",
+                    renewalDateStr,
+                    if (status.tier == "PRO_ANNUAL") 79.00 else 9.99,
+                    status.purchaseToken,
+                    status.orderId
+                )
+                onDismiss()
+            }
+            is BillingStatus.Error -> {
+                isProcessing = false
+                billingErrorMessage = status.message
+            }
+            is BillingStatus.Cancelled -> {
+                isProcessing = false
+                billingErrorMessage = "Transaction was cancelled. Subscription was not activated."
+            }
+            is BillingStatus.Connecting -> {
+                isProcessing = true
+            }
+            else -> {}
+        }
+    }
 
     val planAmount = if (selectedPlan == "PRO_ANNUAL") 79.00 else 9.99
     val planPriceText = if (selectedPlan == "PRO_ANNUAL") "$79.00/yr" else "$9.99/mo"
-
-    val isCardValid = remember(cardNumber, cardExpiry, cardCvc, cardHolder) {
-        val cleanCard = cardNumber.replace(" ", "").replace("-", "")
-        cleanCard.length >= 16 && cardExpiry.length >= 4 && cardCvc.length >= 3 && cardHolder.trim().length >= 2
-    }
-
-    val isPaypalValid = remember(paypalEmail) {
-        paypalEmail.trim().contains("@") && paypalEmail.trim().contains(".")
-    }
-
-    val canProceedPayment = when (selectedPaymentMethod) {
-        "Credit / Debit Card" -> isCardValid
-        "PayPal" -> isPaypalValid
-        else -> true // Google Play is pre-authenticated with user's Google Play store account
-    }
+    val targetProductId = if (selectedPlan == "PRO_ANNUAL") PlayBillingManager.SUB_ANNUAL else PlayBillingManager.SUB_MONTHLY
 
     AlertDialog(
         onDismissRequest = { if (!isProcessing) onDismiss() },
@@ -1459,7 +1486,7 @@ fun ProUpgradeDialog(
                         ProFeatureRow("0% Platform Fees", "Keep 100% of all product sales & tips (0% vs 5% fee)")
                         ProFeatureRow("Unlimited Products", "Upload unlimited digital products & instant downloads")
                         ProFeatureRow("Gold Verified Badge", "Golden checkmark displayed on your public page")
-                        ProFeatureRow("Custom Domain", "multilink.bio/@yourname or own custom domain")
+                        ProFeatureRow("Custom Domain", "yourproject.web.app or own custom domain")
                         ProFeatureRow("High-Res Vector QR", "Print-ready QR standees for physical events")
                     }
                 }
@@ -1494,212 +1521,99 @@ fun ProUpgradeDialog(
                 Spacer(modifier = Modifier.height(2.dp))
 
                 Text(
-                    text = "2. Select Payment Method (Required)",
+                    text = "2. Google Play Payment Processing",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
                     color = TextPrimary
                 )
 
-                // Option A: Google Play
-                PaymentMethodOptionCard(
-                    title = "Google Play In-App Billing",
-                    description = "Direct deduction from Google Play balance or linked bank card",
-                    icon = Icons.Default.ShoppingBag,
-                    isSelected = selectedPaymentMethod == "Google Play",
-                    onClick = { selectedPaymentMethod = "Google Play" }
-                )
+                // Google Play Billing Card (Mandatory Policy)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = BrandDarkBackground),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, GoldStart)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.ShoppingBag,
+                                contentDescription = null,
+                                tint = GoldStart,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Google Play In-App Billing",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                text = "VERIFIED",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = BrandSuccess,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(BrandSuccess.copy(alpha = 0.2f))
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Mandatory for digital subscriptions under Google Play Policy. Purchases are securely billed to your Google Play account or linked payment method.",
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                            lineHeight = 15.sp
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Play Product ID: $targetProductId",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = GoldStart
+                        )
+                    }
+                }
 
-                // Option B: Credit / Debit Card
-                PaymentMethodOptionCard(
-                    title = "Credit or Debit Card",
-                    description = "Visa, MasterCard, American Express, Discover",
-                    icon = Icons.Default.CreditCard,
-                    isSelected = selectedPaymentMethod == "Credit / Debit Card",
-                    onClick = { selectedPaymentMethod = "Credit / Debit Card" }
-                )
-
-                // Option C: PayPal
-                PaymentMethodOptionCard(
-                    title = "PayPal Instant Billing",
-                    description = "Automated subscription deduction via your PayPal account",
-                    icon = Icons.Default.AccountBalance,
-                    isSelected = selectedPaymentMethod == "PayPal",
-                    onClick = { selectedPaymentMethod = "PayPal" }
-                )
-
-                // Conditional Payment Method Inputs
-                if (selectedPaymentMethod == "Credit / Debit Card") {
+                // Diagnostic/Error banner if billing returned an error
+                if (billingErrorMessage != null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = BrandDarkBackground),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BrandPrimary.copy(alpha = 0.5f))
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = BrandWarning.copy(alpha = 0.12f)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BrandWarning.copy(alpha = 0.5f))
                     ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = "Cardholder & Billing Details",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = BrandSecondary
-                            )
-
-                            OutlinedTextField(
-                                value = cardHolder,
-                                onValueChange = { cardHolder = it },
-                                label = { Text("Name on Card", fontSize = 11.sp) },
-                                placeholder = { Text("e.g. Alex Creator", fontSize = 11.sp) },
-                                singleLine = true,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("pro_cardholder_name"),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = BrandPrimary,
-                                    unfocusedBorderColor = BrandDarkBorder
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = BrandWarning,
+                                    modifier = Modifier.size(16.dp)
                                 )
-                            )
-
-                            OutlinedTextField(
-                                value = cardNumber,
-                                onValueChange = {
-                                    val filtered = it.filter { ch -> ch.isDigit() || ch == ' ' }.take(19)
-                                    cardNumber = filtered
-                                },
-                                label = { Text("16-Digit Card Number", fontSize = 11.sp) },
-                                placeholder = { Text("4242 •••• •••• 4242", fontSize = 11.sp) },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("pro_card_number"),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = BrandPrimary,
-                                    unfocusedBorderColor = BrandDarkBorder
-                                )
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedTextField(
-                                    value = cardExpiry,
-                                    onValueChange = {
-                                        val filtered = it.filter { ch -> ch.isDigit() || ch == '/' }.take(5)
-                                        cardExpiry = filtered
-                                    },
-                                    label = { Text("MM/YY", fontSize = 11.sp) },
-                                    placeholder = { Text("12/28", fontSize = 11.sp) },
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .testTag("pro_card_expiry"),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = BrandPrimary,
-                                        unfocusedBorderColor = BrandDarkBorder
-                                    )
-                                )
-
-                                OutlinedTextField(
-                                    value = cardCvc,
-                                    onValueChange = {
-                                        val filtered = it.filter { ch -> ch.isDigit() }.take(4)
-                                        cardCvc = filtered
-                                    },
-                                    label = { Text("CVC", fontSize = 11.sp) },
-                                    placeholder = { Text("123", fontSize = 11.sp) },
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .testTag("pro_card_cvc"),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = BrandPrimary,
-                                        unfocusedBorderColor = BrandDarkBorder
-                                    )
-                                )
-                            }
-
-                            if (!isCardValid && (cardNumber.isNotEmpty() || cardHolder.isNotEmpty())) {
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Please enter a valid 16-digit card, MM/YY, CVC, and name.",
-                                    fontSize = 10.sp,
+                                    text = "Google Play Notice",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
                                     color = BrandWarning
                                 )
                             }
-                        }
-                    }
-                } else if (selectedPaymentMethod == "PayPal") {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = BrandDarkBackground),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BrandPrimary.copy(alpha = 0.5f))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "PayPal Account Authorization",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = BrandSecondary
-                            )
-
-                            OutlinedTextField(
-                                value = paypalEmail,
-                                onValueChange = { paypalEmail = it.trim() },
-                                label = { Text("PayPal Billing Email", fontSize = 11.sp) },
-                                placeholder = { Text("your.email@paypal.com", fontSize = 11.sp) },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("pro_paypal_email"),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = BrandPrimary,
-                                    unfocusedBorderColor = BrandDarkBorder
-                                )
-                            )
-
-                            Text(
-                                text = "Recurring charge of $planPriceText will be authorized and deducted through your PayPal account.",
+                                text = billingErrorMessage ?: "",
                                 fontSize = 10.sp,
-                                color = TextMuted
+                                color = TextPrimary
                             )
-                        }
-                    }
-                } else {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = BrandDarkBackground),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BrandSuccess.copy(alpha = 0.4f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = BrandSuccess,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
+                            if (billingErrorMessage?.contains("Unavailable", ignoreCase = true) == true ||
+                                billingErrorMessage?.contains("not configured", ignoreCase = true) == true ||
+                                billingErrorMessage?.contains("Error code: 4", ignoreCase = true) == true) {
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Google Play Purchase Protection",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BrandSuccess
-                                )
-                                Text(
-                                    text = "Subscription is handled securely through Google Play. Direct deduction occurs at confirmation.",
+                                    text = "Developer Action: Add product ID '$targetProductId' in your Google Play Console under Monetize > Subscriptions and set state to Active.",
                                     fontSize = 10.sp,
                                     color = TextSecondary
                                 )
@@ -1721,7 +1635,7 @@ fun ProUpgradeDialog(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Encrypted live transaction • Bank deduction will occur immediately",
+                        text = "Encrypted live transaction • Manage or cancel anytime in Google Play Store",
                         fontSize = 10.sp,
                         color = TextMuted
                     )
@@ -1731,36 +1645,17 @@ fun ProUpgradeDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (!canProceedPayment) return@Button
-                    isProcessing = true
-
-                    val paymentSummary = when (selectedPaymentMethod) {
-                        "Credit / Debit Card" -> {
-                            val last4 = cardNumber.replace(" ", "").takeLast(4).ifEmpty { "4242" }
-                            "Credit Card (•••• $last4)"
-                        }
-                        "PayPal" -> "PayPal ($paypalEmail)"
-                        else -> "Google Play Billing"
-                    }
-
-                    val cal = java.util.Calendar.getInstance()
-                    if (selectedPlan == "PRO_ANNUAL") {
-                        cal.add(java.util.Calendar.YEAR, 1)
+                    if (isProcessing) return@Button
+                    val act = activity
+                    if (act != null && playBillingManager != null) {
+                        isProcessing = true
+                        billingErrorMessage = null
+                        playBillingManager.launchSubscriptionPurchase(act, selectedPlan)
                     } else {
-                        cal.add(java.util.Calendar.DAY_OF_MONTH, 30)
+                        billingErrorMessage = "Play Billing Client is connecting. Please ensure Google Play Store is available."
                     }
-                    val renewalDateStr = SimpleDateFormat("MMM d, yyyy", Locale.US).format(cal.time)
-                    val txId = "SUB-PRO-" + (100000..999999).random()
-
-                    onProcessPaymentAndUpgrade(
-                        selectedPlan,
-                        paymentSummary,
-                        renewalDateStr,
-                        planAmount,
-                        txId
-                    )
                 },
-                enabled = canProceedPayment && !isProcessing,
+                enabled = !isProcessing,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = GoldStart,
                     disabledContainerColor = BrandDarkBorder
@@ -1769,12 +1664,12 @@ fun ProUpgradeDialog(
                 modifier = Modifier.testTag("confirm_pro_plan_button")
             ) {
                 if (isProcessing) {
-                    Text("Authorizing Payment...", fontWeight = FontWeight.Bold, color = BrandDarkBackground, fontSize = 12.sp)
+                    Text("Connecting to Google Play...", fontWeight = FontWeight.Bold, color = BrandDarkBackground, fontSize = 12.sp)
                 } else {
                     Text(
-                        text = if (isCurrentlyPro) "Update & Charge $planPriceText" else "Pay $$planAmount & Activate PRO",
+                        text = if (isCurrentlyPro) "Switch Plan ($planPriceText)" else "Pay with Google Play ($planPriceText)",
                         fontWeight = FontWeight.Bold,
-                        color = if (canProceedPayment) BrandDarkBackground else TextMuted,
+                        color = BrandDarkBackground,
                         fontSize = 12.sp
                     )
                 }

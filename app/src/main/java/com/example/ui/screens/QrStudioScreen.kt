@@ -98,7 +98,8 @@ fun QrStudioScreen(
     val context = LocalContext.current
     var showStandeeDialog by remember { mutableStateOf(false) }
 
-    val qrContent = profile?.let { "https://${it.customDomain}" } ?: "https://multilink.bio/@creator"
+    val cleanHandle = profile?.handle?.trim()?.removePrefix("@")?.lowercase()?.ifEmpty { "alexa_aura" } ?: "alexa_aura"
+    val qrContent = "https://gen-lang-client-0468598937.web.app/?handle=$cleanHandle"
 
     val colorOptions = listOf(
         Pair("Cyan", BrandSecondary),
@@ -159,8 +160,8 @@ fun QrStudioScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "multilink.bio/@${profile?.handle ?: "alexa_aura"}",
-                        fontSize = 14.sp,
+                        text = "gen-lang-client-0468598937.web.app/?handle=$cleanHandle",
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = BrandSecondary
                     )
@@ -188,7 +189,7 @@ fun QrStudioScreen(
                             action = Intent.ACTION_SEND
                             putExtra(
                                 Intent.EXTRA_TEXT,
-                                "Scan my MultiLink QR Code or visit: https://${profile?.customDomain}"
+                                "Scan my MultiLink QR Code or visit: $qrContent"
                             )
                             type = "text/plain"
                         }

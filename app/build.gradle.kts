@@ -16,8 +16,8 @@ android {
     applicationId = "com.aistudio.multilink.kzqvw"
     minSdk = 24
     targetSdk = 36
-    versionCode = 2
-    versionName = "2.0"
+    versionCode = 7
+    versionName = "7.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -108,6 +108,8 @@ dependencies {
   implementation(libs.coil.compose)
   implementation(libs.zxing.core)
   implementation(libs.converter.moshi)
+  implementation(libs.play.billing)
+  implementation(libs.play.app.update)
   implementation(libs.firebase.ai)
   implementation(libs.firebase.firestore)
   implementation(libs.firebase.auth)

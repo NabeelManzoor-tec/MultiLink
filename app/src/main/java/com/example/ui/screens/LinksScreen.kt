@@ -134,9 +134,11 @@ fun LinksScreen(
                         profile = prof,
                         onEditClicked = { showEditProfileDialog = true },
                         onShareClicked = {
+                            val cleanHandle = prof.handle.trim().removePrefix("@").lowercase().ifEmpty { "alexa_aura" }
+                            val liveUrl = "https://gen-lang-client-0468598937.web.app/?handle=$cleanHandle"
                             val sendIntent = android.content.Intent().apply {
                                 action = android.content.Intent.ACTION_SEND
-                                putExtra(android.content.Intent.EXTRA_TEXT, "Check out my MultiLink bio page: https://${prof.customDomain}")
+                                putExtra(android.content.Intent.EXTRA_TEXT, "Check out my MultiLink bio page: $liveUrl")
                                 type = "text/plain"
                             }
                             context.startActivity(android.content.Intent.createChooser(sendIntent, "Share MultiLink"))
@@ -1013,7 +1015,7 @@ fun EditProfileDialog(
                             bio = bio,
                             location = location,
                             avatarDrawableName = avatarDrawableName,
-                            customDomain = "multilink.bio/@$handle"
+                            customDomain = "gen-lang-client-0468598937.web.app/?handle=${handle.trim().removePrefix("@").lowercase().ifEmpty { "alexa_aura" }}"
                         )
                     )
                 },
