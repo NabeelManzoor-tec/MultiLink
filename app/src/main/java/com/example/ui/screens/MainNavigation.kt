@@ -918,7 +918,7 @@ fun WebPreviewDialog(
     onOpenFullscreen: () -> Unit
 ) {
     val context = LocalContext.current
-    val cleanHandle = profile.handle.trim().removePrefix("@").lowercase().ifEmpty { "alexa_aura" }
+    val cleanHandle = profile.handle.trim().removePrefix("@").lowercase().ifEmpty { "nabeeljutt" }
     val publicWebUrl = "https://gen-lang-client-0468598937.web.app/?handle=$cleanHandle"
 
     AlertDialog(

@@ -98,7 +98,7 @@ fun QrStudioScreen(
     val context = LocalContext.current
     var showStandeeDialog by remember { mutableStateOf(false) }
 
-    val cleanHandle = profile?.handle?.trim()?.removePrefix("@")?.lowercase()?.ifEmpty { "alexa_aura" } ?: "alexa_aura"
+    val cleanHandle = profile?.handle?.trim()?.removePrefix("@")?.lowercase()?.ifEmpty { "nabeeljutt" } ?: "nabeeljutt"
     val qrContent = "https://gen-lang-client-0468598937.web.app/?handle=$cleanHandle"
 
     val colorOptions = listOf(

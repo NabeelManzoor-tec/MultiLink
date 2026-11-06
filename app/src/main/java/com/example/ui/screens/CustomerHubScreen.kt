@@ -54,6 +54,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,6 +71,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.data.firebase.FirestoreSyncManager
 import com.example.data.model.CustomerOrder
 import com.example.ui.theme.BrandDarkBackground
 import com.example.ui.theme.BrandDarkBorder
@@ -96,35 +98,36 @@ fun CustomerHubScreen(
     var showAddPaymentDialog by remember { mutableStateOf(false) }
     var savedCards by remember { mutableStateOf(listOf("Visa ending in •••• 4242 (Exp 08/28)", "Mastercard ending in •••• 8821 (Exp 11/27)")) }
 
+    LaunchedEffect(userEmail) {
+        val effectiveEmail = userEmail.ifEmpty { "nabeeljuttm424@gmail.com" }
+        FirestoreSyncManager.syncUserProfile(
+            context = context,
+            email = effectiveEmail,
+            displayName = userName.ifEmpty { "Customer" },
+            handle = effectiveEmail.substringBefore("@"),
+            role = "customer"
+        )
+    }
+
     val sampleOrders = remember {
         listOf(
             CustomerOrder(
                 id = "ORD-9481",
-                itemTitle = "The Digital Frontier: Cyberpunk 3D Toolkit 2026",
+                itemTitle = "Cyber Frontier Cinematic 3D LUT Pack",
                 itemCategory = "PRODUCT",
                 price = 39.00,
-                creatorHandle = "alexa_aura",
-                creatorName = "Alexa Rivers",
+                creatorHandle = "nabeeljutt",
+                creatorName = "Nabeel Jutt",
                 status = "COMPLETED",
                 downloadUrl = "https://gen-lang-client-0468598937.web.app/downloads/pack-2026.zip"
             ),
             CustomerOrder(
-                id = "ORD-8204",
-                itemTitle = "1-on-1 Creative Direction & Portfolio Review",
-                itemCategory = "SERVICE",
-                price = 150.00,
-                creatorHandle = "alexa_aura",
-                creatorName = "Alexa Rivers",
-                status = "CONFIRMED",
-                sessionDate = "Tomorrow at 2:00 PM (Google Meet)"
-            ),
-            CustomerOrder(
                 id = "ORD-5192",
-                itemTitle = "Support Tip • Matcha Fund",
+                itemTitle = "Support Tip • Creator Fund",
                 itemCategory = "TIP",
                 price = 10.00,
-                creatorHandle = "alexa_aura",
-                creatorName = "Alexa Rivers",
+                creatorHandle = "nabeeljutt",
+                creatorName = "Nabeel Jutt",
                 status = "COMPLETED"
             )
         )
@@ -579,8 +582,8 @@ fun CustomerHubScreen(
                                     Icon(Icons.Default.Coffee, contentDescription = null, tint = BrandSuccess, modifier = Modifier.size(20.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Column {
-                                        Text("Tip to @alexa_aura", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
-                                        Text("Goal: Unreal Rig Fund • Google Pay", fontSize = 11.sp, color = TextSecondary)
+                                        Text("Tip to @nabeeljutt", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
+                                        Text("Goal: Creator Studio Fund • PayPal", fontSize = 11.sp, color = TextSecondary)
                                     }
                                 }
                                 Text("+$10.00", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = BrandSuccess)
@@ -640,12 +643,12 @@ fun CustomerHubScreen(
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Alexa Rivers", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                                    Text("Nabeel Jutt", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Icon(Icons.Default.CheckCircle, contentDescription = null, tint = BrandSecondary, modifier = Modifier.size(14.dp))
                                 }
-                                Text("@alexa_aura", fontSize = 12.sp, color = BrandPrimary, fontWeight = FontWeight.Medium)
-                                Text("50+ Cyberpunk Shaders & 1-on-1 Mentorship", fontSize = 11.sp, color = TextSecondary, maxLines = 1)
+                                Text("@nabeeljutt", fontSize = 12.sp, color = BrandPrimary, fontWeight = FontWeight.Medium)
+                                Text("Digital Creator, Tools & MultiLink Directory", fontSize = 11.sp, color = TextSecondary, maxLines = 1)
                             }
 
                             Button(
@@ -876,7 +879,10 @@ fun CustomerProductCard(order: CustomerOrder) {
 
             IconButton(
                 onClick = {
-                    Toast.makeText(context, "Downloading asset package...", Toast.LENGTH_SHORT).show()
+                    com.example.util.LocalAssetDownloader.downloadProductAssets(
+                        context = context,
+                        productTitle = order.itemTitle
+                    )
                 },
                 modifier = Modifier
                     .size(38.dp)

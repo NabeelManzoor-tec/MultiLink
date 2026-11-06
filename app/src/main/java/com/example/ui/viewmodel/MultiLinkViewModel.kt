@@ -217,6 +217,39 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
                     repository.saveProfile(updated)
                 }
             }
+            if (revenue > 0.0) {
+                val current = profile.value
+                val handle = current?.handle ?: "nabeeljutt"
+                val name = current?.displayName ?: "Nabeel Jutt"
+                val txType = when (link.category) {
+                    LinkCategory.TIP -> "TIP"
+                    LinkCategory.PRODUCT -> "PRODUCT_PURCHASE"
+                    LinkCategory.SERVICE -> "SERVICE_BOOKING"
+                    else -> "PURCHASE"
+                }
+                val txId = "tx_${System.currentTimeMillis()}"
+                FirestoreSyncManager.recordTransaction(
+                    context = getApplication(),
+                    transactionId = txId,
+                    type = txType,
+                    itemTitle = link.title,
+                    amount = revenue,
+                    currency = "USD",
+                    paymentMethod = source,
+                    creatorHandle = handle,
+                    creatorName = name,
+                    customerEmail = "nabeeljuttm424@gmail.com",
+                    customerName = "Verified Supporter",
+                    donorNote = "Recorded from $source ($device)"
+                )
+                FirestoreSyncManager.syncUserProfile(
+                    context = getApplication(),
+                    email = "nabeeljuttm424@gmail.com",
+                    displayName = name,
+                    handle = handle,
+                    role = "creator"
+                )
+            }
         }
     }
 
@@ -234,6 +267,31 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
                 country = country,
                 device = device,
                 revenue = amount
+            )
+            val current = profile.value
+            val handle = current?.handle ?: "nabeeljutt"
+            val name = current?.displayName ?: "Nabeel Jutt"
+            val txId = "tx_ord_${System.currentTimeMillis()}"
+            FirestoreSyncManager.recordTransaction(
+                context = getApplication(),
+                transactionId = txId,
+                type = if (product.category == LinkCategory.SERVICE) "SERVICE_BOOKING" else "PRODUCT_PURCHASE",
+                itemTitle = product.title,
+                amount = amount,
+                currency = "USD",
+                paymentMethod = paymentMethod,
+                creatorHandle = handle,
+                creatorName = name,
+                customerEmail = "nabeeljuttm424@gmail.com",
+                customerName = "Verified Customer",
+                status = "COMPLETED"
+            )
+            FirestoreSyncManager.syncUserProfile(
+                context = getApplication(),
+                email = "nabeeljuttm424@gmail.com",
+                displayName = name,
+                handle = handle,
+                role = "creator"
             )
         }
     }
@@ -265,6 +323,14 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
                 preferredTipMethod = preferredTipMethod
             )
             repository.saveProfile(updated)
+            FirestoreSyncManager.syncProfileToFirestore(getApplication(), updated)
+            FirestoreSyncManager.syncUserProfile(
+                context = getApplication(),
+                email = "nabeeljuttm424@gmail.com",
+                displayName = updated.displayName,
+                handle = updated.handle,
+                role = "creator"
+            )
         }
     }
 
@@ -286,6 +352,29 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
                 proOrderId = orderId
             )
             repository.saveProfile(updated)
+            val txId = if (orderId.isNotBlank()) orderId else "tx_pro_${System.currentTimeMillis()}"
+            val proAmount = if (tier == "PRO_ANNUAL") 69.99 else 9.99
+            FirestoreSyncManager.recordTransaction(
+                context = getApplication(),
+                transactionId = txId,
+                type = "PRO_SUBSCRIPTION",
+                itemTitle = "MultiLink PRO ($tier)",
+                amount = proAmount,
+                currency = "USD",
+                paymentMethod = paymentMethod,
+                creatorHandle = current.handle,
+                creatorName = current.displayName,
+                customerEmail = "nabeeljuttm424@gmail.com",
+                customerName = current.displayName,
+                status = "ACTIVE"
+            )
+            FirestoreSyncManager.syncUserProfile(
+                context = getApplication(),
+                email = "nabeeljuttm424@gmail.com",
+                displayName = current.displayName,
+                handle = current.handle,
+                role = "creator"
+            )
         }
     }
 
@@ -321,6 +410,29 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
                     revenue = amount
                 )
             }
+
+            val txId = "tx_tip_${System.currentTimeMillis()}"
+            FirestoreSyncManager.recordTransaction(
+                context = getApplication(),
+                transactionId = txId,
+                type = "TIP",
+                itemTitle = "Fan Tip Support",
+                amount = amount,
+                currency = "USD",
+                paymentMethod = paymentMethod,
+                creatorHandle = current.handle,
+                creatorName = current.displayName,
+                customerEmail = "nabeeljuttm424@gmail.com",
+                customerName = "Supporter",
+                donorNote = "Direct Tip via $paymentMethod"
+            )
+            FirestoreSyncManager.syncUserProfile(
+                context = getApplication(),
+                email = "nabeeljuttm424@gmail.com",
+                displayName = current.displayName,
+                handle = current.handle,
+                role = "creator"
+            )
         }
     }
 
@@ -328,14 +440,37 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             profile.filterNotNull().collect { prof ->
                 FirestoreSyncManager.syncProfileToFirestore(getApplication(), prof)
+                FirestoreSyncManager.syncUserProfile(
+                    context = getApplication(),
+                    email = "nabeeljuttm424@gmail.com",
+                    displayName = prof.displayName,
+                    handle = prof.handle,
+                    role = "creator"
+                )
                 FirestoreSyncManager.startWebEventListener(getApplication(), prof.handle) { webEvent ->
                     viewModelScope.launch {
                         repository.recordExternalClick(webEvent)
-                        if (webEvent.revenueAmount > 0.0 && webEvent.category == LinkCategory.TIP.name) {
-                            val curr = profile.value
-                            if (curr != null) {
-                                repository.saveProfile(curr.copy(tipGoalCurrent = curr.tipGoalCurrent + webEvent.revenueAmount))
+                        if (webEvent.revenueAmount > 0.0) {
+                            if (webEvent.category == LinkCategory.TIP.name) {
+                                val curr = profile.value
+                                if (curr != null) {
+                                    repository.saveProfile(curr.copy(tipGoalCurrent = curr.tipGoalCurrent + webEvent.revenueAmount))
+                                }
                             }
+                            val txId = "tx_web_${webEvent.timestamp}"
+                            FirestoreSyncManager.recordTransaction(
+                                context = getApplication(),
+                                transactionId = txId,
+                                type = webEvent.category,
+                                itemTitle = webEvent.linkTitle,
+                                amount = webEvent.revenueAmount,
+                                currency = "USD",
+                                paymentMethod = "Web Portal (${webEvent.sourcePlatform})",
+                                creatorHandle = prof.handle,
+                                creatorName = prof.displayName,
+                                customerEmail = "nabeeljuttm424@gmail.com",
+                                customerName = "Web Customer"
+                            )
                         }
                     }
                 }
@@ -344,7 +479,7 @@ class MultiLinkViewModel(application: Application) : AndroidViewModel(applicatio
 
         viewModelScope.launch {
             allLinks.collect { links ->
-                val handle = profile.value?.handle ?: "alexa_aura"
+                val handle = profile.value?.handle ?: "nabeeljutt"
                 if (links.isNotEmpty()) {
                     FirestoreSyncManager.syncLinksToFirestore(getApplication(), handle, links)
                 }

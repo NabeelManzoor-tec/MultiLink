@@ -1,0 +1,22 @@
+{
+  "name": "Cyber Frontier Cinematic 2026",
+  "version": "2026.4.1",
+  "category": "Cinematic Color Grade & 3D LUT",
+  "compatibleSoftware": [
+    "DaVinci Resolve Studio",
+    "Adobe Premiere Pro CC",
+    "Adobe Photoshop",
+    "Apple Final Cut Pro",
+    "CapCut Pro Desktop"
+  ],
+  "colorSpace": "Rec.709 / Linear Gamma",
+  "gradingParams": {
+    "highlights": "+12 Cyan Neon",
+    "shadows": "+18 Cyber Violet",
+    "contrast": 1.15,
+    "saturation": 1.08,
+    "grainStrength": 0.04
+  },
+  "commercialRights": "Perpetual Commercial & Studio Extended Rights",
+  "author": "Nabeel Jutt (@nabeeljutt)"
+}

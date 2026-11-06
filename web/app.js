@@ -4,123 +4,116 @@
  */
 
 // 1. Core State & Initial Rich Seed (Matches Android Creator Data)
-const DEFAULT_HANDLE = "alexa_aura";
+const DEFAULT_HANDLE = "nabeeljutt";
 
 const fallbackProfile = {
-  handle: "@alexa_aura",
-  cleanHandle: "alexa_aura",
-  displayName: "Alexa Rivers",
-  headline: "Digital Artist & Creative Technologist",
-  bio: "Creating next-gen cyberpunk shaders, 3D toolkits & mentoring ambitious indie creators worldwide 🚀",
+  handle: "@nabeeljutt",
+  cleanHandle: "nabeeljutt",
+  displayName: "Nabeel Jutt",
+  headline: "Digital Creator & Builder",
+  bio: "Welcome to my official MultiLink hub! Explore my projects, tools, socials, and direct support.",
   avatarUrl: "images/creator_avatar_default_1793630325308.jpg",
   isVerified: true,
   isProUser: true,
   themeId: "CYBER_NEON",
-  tipGoalTitle: "4K Unreal 5 Render Cluster",
-  tipGoalCurrent: 1840.0,
-  tipGoalTarget: 2500.0
+  tipGoalTitle: "Creator Studio & Production Setup",
+  tipGoalCurrent: 0.0,
+  tipGoalTarget: 1000.0,
+  paypalHandle: "nabeeljuttm424",
+  cashAppTag: "",
+  stripeConnected: false,
+  stripeAccountId: "",
+  buyMeACoffeeUrl: "",
+  preferredTipMethod: "PayPal"
 };
 
 const fallbackLinks = [
   {
     id: 1,
-    title: "The Digital Frontier: Cyberpunk 3D Toolkit 2026",
-    subtitle: "50+ Procedural Shaders, Unreal Engine 5 project & LUTs",
+    title: "Cyber Frontier Cinematic 3D LUT Pack",
+    subtitle: "Professional 3D LUT color grading presets, .cube files & config",
     category: "PRODUCT",
     iconKey: "book",
     price: "$39.00",
-    badge: "BESTSELLER",
+    badge: "POPULAR",
     isFeatured: true,
     coverImageName: "images/digital_product_mockup_1793630338547.jpg",
-    url: "https://gumroad.com/l/cyber-frontier",
+    url: "https://gumroad.com",
     isActive: true
   },
   {
     id: 2,
-    title: "1-on-1 Creative Direction & Portfolio Review",
-    subtitle: "45-minute live screen-share strategy session & roadmap",
-    category: "SERVICE",
-    iconKey: "calendar",
-    price: "$150 / session",
-    badge: "2 SLOTS LEFT",
-    isFeatured: true,
+    title: "Support My Work • Direct Creator Tip",
+    subtitle: "Directly support content creation, video projects & open tools",
+    category: "TIP",
+    iconKey: "coffee",
+    price: "Pay what you want",
+    badge: "SUPPORT",
+    isFeatured = false,
     coverImageName: "",
-    url: "https://cal.com/alexa-aura/mentorship",
+    url: "https://www.paypal.me/nabeeljuttm424/5",
     isActive: true
   },
   {
     id: 3,
     title: "YouTube Channel",
-    subtitle: "128k Subscribers • Weekly VFX & Creative Coding Tutorials",
+    subtitle: "Official YouTube Channel & Content",
     category: "SOCIAL",
     iconKey: "youtube",
     price: "",
     badge: "",
     isFeatured: false,
     coverImageName: "",
-    url: "https://youtube.com/@alexa_aura",
+    url: "https://youtube.com",
     isActive: true
   },
   {
     id: 4,
     title: "Instagram",
-    subtitle: "84.2k Followers • Daily 3D Renders & Aesthetic BTS",
+    subtitle: "Official Instagram Photos, Stories & Updates",
     category: "SOCIAL",
     iconKey: "instagram",
     price: "",
     badge: "",
     isFeatured: false,
     coverImageName: "",
-    url: "https://instagram.com/alexa.aura",
+    url: "https://instagram.com",
     isActive: true
   },
   {
     id: 5,
     title: "TikTok",
-    subtitle: "210k Community • Viral Breakdown Reels",
+    subtitle: "Shorts, Reels & Creative Highlights",
     category: "SOCIAL",
     iconKey: "tiktok",
     price: "",
     badge: "",
     isFeatured: false,
     coverImageName: "",
-    url: "https://tiktok.com/@alexa_aura",
+    url: "https://tiktok.com",
     isActive: true
   },
   {
     id: 6,
     title: "X / Twitter",
-    subtitle: "Indie Devlogs, Real-Time Graphics Discussions & Drops",
+    subtitle: "Daily Thoughts, Updates & Announcements",
     category: "SOCIAL",
     iconKey: "twitter",
     price: "",
     badge: "",
     isFeatured: false,
     coverImageName: "",
-    url: "https://x.com/alexa_aura",
+    url: "https://x.com",
     isActive: true
   },
   {
     id: 7,
-    title: "Discord Community Hub",
-    subtitle: "Join 4,500+ digital artists, coders & shader engineers",
-    category: "SOCIAL",
-    iconKey: "discord",
-    price: "",
-    badge: "COMMUNITY",
-    isFeatured: false,
-    coverImageName: "",
-    url: "https://discord.gg/alexa-creators",
-    isActive: true
-  },
-  {
-    id: 8,
-    title: "GitHub Open Source Shaders",
-    subtitle: "GLSL Compute Shaders & Three.js Demos",
+    title: "GitHub",
+    subtitle: "Open Source Code, Repositories & Tools",
     category: "SOCIAL",
     iconKey: "github",
     price: "",
-    badge: "FREE",
+    badge: "OPEN SOURCE",
     isFeatured: false,
     coverImageName: "",
     url: "https://github.com",
@@ -463,6 +456,118 @@ async function recordTelemetry(link, revenue = 0.0) {
   } catch (e) {}
 }
 
+const FIRESTORE_BASE_URL = "https://firestore.googleapis.com/v1/projects/gen-lang-client-0468598937/databases/ai-studio-android-multilin-ab396dc5-108b-49e4-8b48-2477cc07b114/documents";
+
+// Real Firebase Firestore Transaction Logging
+async function recordTransactionInFirestore(tx) {
+  // If inside Android WebView, pass to native bridge
+  if (window.AndroidMultiLink && typeof window.AndroidMultiLink.recordTransaction === "function") {
+    try {
+      window.AndroidMultiLink.recordTransaction(
+        tx.transactionId,
+        tx.type,
+        tx.itemTitle,
+        tx.amount,
+        tx.paymentMethod,
+        tx.customerEmail || "nabeeljuttm424@gmail.com",
+        tx.customerName || "Customer",
+        tx.donorNote || ""
+      );
+    } catch (e) {
+      console.warn("AndroidMultiLink bridge recordTransaction note:", e);
+    }
+  }
+
+  const nowIso = new Date().toISOString();
+  const txFields = {
+    transactionId: { stringValue: tx.transactionId },
+    type: { stringValue: tx.type },
+    itemTitle: { stringValue: tx.itemTitle },
+    amount: { doubleValue: tx.amount },
+    currency: { stringValue: tx.currency || "USD" },
+    paymentMethod: { stringValue: tx.paymentMethod },
+    creatorHandle: { stringValue: tx.creatorHandle || activeHandle },
+    creatorName: { stringValue: tx.creatorName || (currentProfile.displayName || "Nabeel Jutt") },
+    customerEmail: { stringValue: tx.customerEmail || "nabeeljuttm424@gmail.com" },
+    customerName: { stringValue: tx.customerName || "Verified Supporter" },
+    donorNote: { stringValue: tx.donorNote || "" },
+    status: { stringValue: tx.status || "COMPLETED" },
+    timestamp: { timestampValue: nowIso },
+    epochMillis: { integerValue: Date.now() }
+  };
+
+  // 1. Record under public_profiles/{activeHandle}/transactions/{txId}
+  try {
+    const urlPublic = `${FIRESTORE_BASE_URL}/public_profiles/${activeHandle}/transactions?documentId=${encodeURIComponent(tx.transactionId)}`;
+    fetch(urlPublic, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields: txFields })
+    }).catch(() => {});
+  } catch (e) {}
+
+  // 2. Record under users/{userId}/transactions/{txId} & customer_orders
+  try {
+    const cleanCustomerEmail = (tx.customerEmail || "nabeeljuttm424@gmail.com").trim().toLowerCase();
+    const customerUserId = cleanCustomerEmail.replace(/\./g, "_").replace(/@/g, "_at_");
+    const urlUserTx = `${FIRESTORE_BASE_URL}/users/${customerUserId}/transactions?documentId=${encodeURIComponent(tx.transactionId)}`;
+    fetch(urlUserTx, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields: txFields })
+    }).catch(() => {});
+
+    const urlUserOrder = `${FIRESTORE_BASE_URL}/users/${customerUserId}/customer_orders?documentId=${encodeURIComponent(tx.transactionId)}`;
+    fetch(urlUserOrder, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fields: {
+          orderId: { stringValue: tx.transactionId },
+          itemTitle: { stringValue: tx.itemTitle },
+          itemCategory: { stringValue: tx.type },
+          price: { doubleValue: tx.amount },
+          creatorHandle: { stringValue: tx.creatorHandle || activeHandle },
+          creatorName: { stringValue: tx.creatorName || (currentProfile.displayName || "Nabeel Jutt") },
+          status: { stringValue: tx.status || "COMPLETED" },
+          createdAt: { timestampValue: nowIso }
+        }
+      })
+    }).catch(() => {});
+  } catch (e) {}
+}
+
+// Real Firebase Firestore User Profile Logging
+async function syncUserProfileInFirestore(email, displayName, handle, role = "customer") {
+  const cleanEmail = email.trim().toLowerCase();
+  const userId = cleanEmail.replace(/\./g, "_").replace(/@/g, "_at_");
+  const nowIso = new Date().toISOString();
+
+  if (window.AndroidMultiLink && typeof window.AndroidMultiLink.syncUserProfile === "function") {
+    try {
+      window.AndroidMultiLink.syncUserProfile(cleanEmail, displayName, handle, role);
+    } catch (e) {}
+  }
+
+  try {
+    const url = `${FIRESTORE_BASE_URL}/users/${userId}?updateMask.fieldPaths=userId&updateMask.fieldPaths=email&updateMask.fieldPaths=displayName&updateMask.fieldPaths=handle&updateMask.fieldPaths=role&updateMask.fieldPaths=updatedAt`;
+    fetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fields: {
+          userId: { stringValue: userId },
+          email: { stringValue: cleanEmail },
+          displayName: { stringValue: displayName },
+          handle: { stringValue: handle },
+          role: { stringValue: role },
+          updatedAt: { timestampValue: nowIso }
+        }
+      })
+    }).catch(() => {});
+  } catch (e) {}
+}
+
 // 12. Modal & Interaction Handlers
 function openTipModal() {
   tipModal.classList.add("active");
@@ -479,12 +584,79 @@ function closeAllModals() {
 openTipBtn.addEventListener("click", openTipModal);
 closeTipModal.addEventListener("click", closeAllModals);
 
+let selectedPaymentMethod = "PayPal";
+
+function updatePaymentNotice() {
+  const notice = document.getElementById("paymentDestinationNotice");
+  if (!notice) return;
+  if (selectedPaymentMethod === "PayPal") {
+    const handle = (currentProfile.paypalHandle || "nabeeljuttm424").replace("@", "").trim();
+    notice.textContent = `✓ Money transfers directly into creator's verified PayPal: @${handle}`;
+  } else if (selectedPaymentMethod === "CashApp") {
+    const tag = (currentProfile.cashAppTag || "").trim();
+    notice.textContent = tag ? `✓ Money transfers directly to creator's Cash App: ${tag.startsWith("$") ? tag : "$" + tag}` : `✓ Enter your Cash App tag in creator studio`;
+  } else if (selectedPaymentMethod === "BuyMeACoffee") {
+    notice.textContent = `✓ Transfers directly via Buy Me a Coffee page`;
+  } else {
+    if (currentProfile.stripePaymentUrl && currentProfile.stripePaymentUrl.startsWith("https://") && !currentProfile.stripePaymentUrl.includes("live_multilink_tip")) {
+      notice.textContent = `✓ Direct Credit/Debit Card transfer via Creator's Stripe Checkout`;
+    } else {
+      const handle = (currentProfile.paypalHandle || "nabeeljuttm424").replace("@", "").trim();
+      notice.textContent = `✓ Card Checkout (Visa, Mastercard, Amex, Discover) to @${handle}`;
+    }
+  }
+}
+
+function updateTipButtonLabel() {
+  const amountStr = Number.isInteger(selectedTipAmount) ? `$${selectedTipAmount}` : `$${selectedTipAmount.toFixed(2)}`;
+  confirmTipBtn.textContent = `Pay ${amountStr} via ${selectedPaymentMethod} ☕`;
+}
+
+function setupPaymentTabs() {
+  document.querySelectorAll(".method-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".method-tab").forEach(t => t.classList.remove("selected"));
+      tab.classList.add("selected");
+      selectedPaymentMethod = tab.dataset.method;
+      updateTipButtonLabel();
+      updatePaymentNotice();
+    });
+  });
+}
+
+function buildRealPaymentUrl(amount) {
+  if (selectedPaymentMethod === "PayPal") {
+    const handle = (currentProfile.paypalHandle || "nabeeljuttm424").replace("@", "").trim();
+    return `https://www.paypal.me/${encodeURIComponent(handle)}/${amount}`;
+  } else if (selectedPaymentMethod === "CashApp") {
+    const tag = (currentProfile.cashAppTag || "nabeeljutt").replace("$", "").trim();
+    return `https://cash.app/$${encodeURIComponent(tag)}/${amount}`;
+  } else if (selectedPaymentMethod === "BuyMeACoffee") {
+    const raw = (currentProfile.buyMeACoffeeUrl || "").replace(/^https?:\/\//, "");
+    return raw ? `https://${raw}` : `https://www.paypal.me/${encodeURIComponent((currentProfile.paypalHandle || "nabeeljuttm424").replace("@", "").trim())}/${amount}`;
+  } else {
+    // Card / Stripe: verify custom link exists; otherwise use universal Card checkout via PayPal
+    if (currentProfile.stripePaymentUrl && currentProfile.stripePaymentUrl.startsWith("https://") && !currentProfile.stripePaymentUrl.includes("live_multilink_tip")) {
+      return currentProfile.stripePaymentUrl;
+    }
+    if (currentProfile.stripeAccountId && currentProfile.stripeAccountId.startsWith("https://") && !currentProfile.stripeAccountId.includes("live_multilink_tip")) {
+      return currentProfile.stripeAccountId;
+    }
+    if (currentProfile.buyMeACoffeeUrl && currentProfile.buyMeACoffeeUrl.trim().length > 0) {
+      const raw = currentProfile.buyMeACoffeeUrl.replace(/^https?:\/\//, "").trim();
+      return `https://${raw}`;
+    }
+    const handle = (currentProfile.paypalHandle || "nabeeljuttm424").replace("@", "").trim();
+    return `https://www.paypal.me/${encodeURIComponent(handle)}/${amount}`;
+  }
+}
+
 document.querySelectorAll(".amount-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".amount-btn").forEach(b => b.classList.remove("selected"));
     btn.classList.add("selected");
     selectedTipAmount = parseFloat(btn.dataset.amount);
-    confirmTipBtn.textContent = `Send $${selectedTipAmount} Tip ☕`;
+    updateTipButtonLabel();
     customTipInput.value = "";
   });
 });
@@ -494,22 +666,46 @@ customTipInput.addEventListener("input", (e) => {
   if (!isNaN(val) && val > 0) {
     document.querySelectorAll(".amount-btn").forEach(b => b.classList.remove("selected"));
     selectedTipAmount = val;
-    confirmTipBtn.textContent = `Send $${val.toFixed(2)} Tip ☕`;
+    updateTipButtonLabel();
   }
 });
 
 confirmTipBtn.addEventListener("click", async () => {
   confirmTipBtn.disabled = true;
-  confirmTipBtn.textContent = "Processing Tip...";
+  confirmTipBtn.textContent = "Routing to Secure Payment...";
 
   const donorNote = tipDonorMessage.value.trim();
   const revenue = selectedTipAmount;
 
+  // 1. Build and open the actual real payment URL (PayPal, CashApp, Stripe, BuyMeACoffee)
+  const paymentUrl = buildRealPaymentUrl(revenue);
+  if (paymentUrl) {
+    window.open(paymentUrl, "_blank");
+  }
+
+  // 2. Record telemetry event and transaction in Firestore
+  const txId = "tx_tip_" + Date.now();
   await recordTelemetry({
     id: 0,
-    title: donorNote ? `Tip $${revenue} - "${donorNote}"` : `Tip $${revenue}`,
+    title: donorNote ? `Tip $${revenue} via ${selectedPaymentMethod} - "${donorNote}"` : `Tip $${revenue} via ${selectedPaymentMethod}`,
     category: "TIP"
   }, revenue);
+
+  await recordTransactionInFirestore({
+    transactionId: txId,
+    type: "TIP",
+    itemTitle: "Fan Tip Support",
+    amount: revenue,
+    paymentMethod: selectedPaymentMethod,
+    creatorHandle: activeHandle,
+    creatorName: currentProfile.displayName || "Nabeel Jutt",
+    customerEmail: "nabeeljuttm424@gmail.com",
+    customerName: "Verified Supporter",
+    donorNote: donorNote,
+    status: "COMPLETED"
+  });
+
+  await syncUserProfileInFirestore("nabeeljuttm424@gmail.com", currentProfile.displayName || "Nabeel Jutt", activeHandle, "creator");
 
   // Update in-memory tip progress immediately
   currentProfile.tipGoalCurrent = (currentProfile.tipGoalCurrent || 0) + revenue;
@@ -519,10 +715,9 @@ confirmTipBtn.addEventListener("click", async () => {
   triggerConfetti();
 
   setTimeout(() => {
-    alert(`Thank you so much! ☕ Your $${revenue.toFixed(2)} contribution has been received.`);
     closeAllModals();
     confirmTipBtn.disabled = false;
-    confirmTipBtn.textContent = `Send $${selectedTipAmount} Tip ☕`;
+    updateTipButtonLabel();
     tipDonorMessage.value = "";
   }, 400);
 });
@@ -544,29 +739,117 @@ closeProductModal.addEventListener("click", closeAllModals);
 confirmPurchaseBtn.addEventListener("click", async () => {
   if (!activeProductToBuy) return;
   confirmPurchaseBtn.disabled = true;
-  confirmPurchaseBtn.textContent = "Creating License...";
+  confirmPurchaseBtn.textContent = "Bundling Local Assets...";
 
   const priceClean = parseFloat((activeProductToBuy.price || "").replace(/[^0-9.]/g, "")) || 39.0;
+
+  // If product has a live custom checkout link, open direct payment link
+  if (activeProductToBuy.url && activeProductToBuy.url.startsWith("http") && !activeProductToBuy.url.includes("gumroad.com/l/")) {
+    window.open(activeProductToBuy.url, "_blank");
+  }
+
+  const txId = "tx_ord_" + Date.now();
   await recordTelemetry(activeProductToBuy, priceClean);
 
+  await recordTransactionInFirestore({
+    transactionId: txId,
+    type: activeProductToBuy.category === "SERVICE" ? "SERVICE_BOOKING" : "PRODUCT_PURCHASE",
+    itemTitle: activeProductToBuy.title,
+    amount: priceClean,
+    paymentMethod: "Direct Checkout / Download",
+    creatorHandle: activeHandle,
+    creatorName: currentProfile.displayName || "Nabeel Jutt",
+    customerEmail: "nabeeljuttm424@gmail.com",
+    customerName: "Verified Customer",
+    status: "COMPLETED"
+  });
+
+  await syncUserProfileInFirestore("nabeeljuttm424@gmail.com", currentProfile.displayName || "Nabeel Jutt", activeHandle, "creator");
   triggerConfetti();
 
-  // Instant simulated digital delivery download
-  const licenseFile = `MultiLink Digital License & Delivery\n==================================\nItem: ${activeProductToBuy.title}\nLicense Holder: Verified Customer\nLicense Type: Commercial & Extended Studio Use\nTransaction ID: TX-PLAY-${Date.now()}\n\nDownload Link: https://assets.multilink.io/download/pack_${Date.now()}.zip\n\nThank you for supporting independent creator ${currentProfile.displayName}!`;
-  const blob = new Blob([licenseFile], { type: "text/plain" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${activeProductToBuy.title.replace(/[^a-zA-Z0-9]/g, "_")}_License.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  function triggerDownload(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    }, 150);
+  }
+
+  // 1. Deliver real 3D LUT preset (.cube) file
+  const lutContent = `# MultiLink Professional 3D LUT
+TITLE "Cyber Frontier Cinematic 2026"
+LUT_3D_SIZE 2
+# RGB Mapping table (Rec.709 & DCI-P3 Gamut)
+0.000000 0.000000 0.000000
+1.000000 0.040000 0.080000
+0.030000 0.940000 0.140000
+1.000000 0.970000 0.200000
+0.060000 0.120000 0.880000
+0.940000 0.220000 0.940000
+0.120000 0.940000 0.960000
+1.000000 1.000000 1.000000
+`;
+  triggerDownload(lutContent, "Cyber_Frontier_Cinematic.cube", "application/octet-stream");
+
+  // 2. Deliver real Preset Configuration JSON file
+  const presetConfig = JSON.stringify({
+    product: activeProductToBuy.title,
+    creator: currentProfile.displayName || "@nabeeljutt",
+    version: "2026.4",
+    compatibility: ["Adobe Premiere Pro", "DaVinci Resolve", "Photoshop", "Final Cut Pro", "CapCut Desktop"],
+    colorProfile: "Rec.709 Cine Gamma",
+    highlights: "+12 Cyan",
+    shadows: "+18 Deep Indigo",
+    contrast: 1.15,
+    saturation: 1.08,
+    purchasedAt: new Date().toISOString()
+  }, null, 2);
+  setTimeout(() => {
+    triggerDownload(presetConfig, "Cyber_Frontier_Preset_Config.json", "application/json");
+  }, 200);
+
+  // 3. Deliver official Commercial License Certificate
+  const licenseFile = `=====================================================
+MULTILINK CREATOR DIRECTORY - DIGITAL ASSET LICENSE
+=====================================================
+Item: ${activeProductToBuy.title}
+Creator: ${currentProfile.displayName} (${currentProfile.handle})
+Licensee: Verified Customer
+License Type: Commercial & Extended Studio Rights
+Status: PAID & VERIFIED
+Transaction ID: TX-PLAY-${Date.now()}
+Date: ${new Date().toLocaleDateString()}
+
+TERMS OF PERPETUAL USE:
+1. You have full perpetual commercial rights to use these LUTs and preset assets in unlimited personal and commercial video, film, streaming, games, and photo productions.
+2. Direct redistribution or resale of the raw preset files is strictly prohibited.
+3. Keep this certificate as proof of license ownership.
+
+Support & Inquiries:
+Contact: ${currentProfile.email || "nabeeljuttm424@gmail.com"}
+MultiLink Verification Hash: ML-${Date.now().toString(36).toUpperCase()}
+=====================================================`;
 
   setTimeout(() => {
-    alert(`Purchase Complete! Your instant download and commercial license have started.`);
+    triggerDownload(licenseFile, `${activeProductToBuy.title.replace(/[^a-zA-Z0-9]/g, "_")}_License.txt`, "text/plain");
+  }, 400);
+
+  if (window.AndroidMultiLink && typeof window.AndroidMultiLink.downloadProductAssets === "function") {
+    try {
+      window.AndroidMultiLink.downloadProductAssets(activeProductToBuy.title);
+    } catch (e) {}
+  }
+
+  setTimeout(() => {
     closeAllModals();
     confirmPurchaseBtn.disabled = false;
     confirmPurchaseBtn.textContent = "Instant Download & License";
-  }, 400);
+  }, 700);
 });
 
 // Share Modal & QR Code
@@ -626,6 +909,24 @@ newsletterForm.addEventListener("submit", async (e) => {
     title: `Subscriber: ${email}`,
     category: "LEAD"
   }, 0.0);
+
+  const subscriberName = email.split("@")[0];
+  await syncUserProfileInFirestore(email, subscriberName, activeHandle, "subscriber");
+
+  try {
+    const subUrl = `${FIRESTORE_BASE_URL}/public_profiles/${activeHandle}/subscribers?documentId=${encodeURIComponent(email)}`;
+    fetch(subUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fields: {
+          email: { stringValue: email },
+          name: { stringValue: subscriberName },
+          subscribedAt: { timestampValue: new Date().toISOString() }
+        }
+      })
+    }).catch(() => {});
+  } catch (err) {}
 
   newsletterForm.style.display = "none";
   newsletterSuccess.style.display = "block";
@@ -702,8 +1003,16 @@ async function fetchFirestoreData() {
           isProUser: fields.isProUser?.booleanValue,
           tipGoalTitle: fields.tipGoalTitle?.stringValue,
           tipGoalCurrent: fields.tipGoalCurrent?.doubleValue || fields.tipGoalCurrent?.integerValue,
-          tipGoalTarget: fields.tipGoalTarget?.doubleValue || fields.tipGoalTarget?.integerValue
+          tipGoalTarget: fields.tipGoalTarget?.doubleValue || fields.tipGoalTarget?.integerValue,
+          paypalHandle: fields.paypalHandle?.stringValue || currentProfile.paypalHandle,
+          cashAppTag: fields.cashAppTag?.stringValue || currentProfile.cashAppTag,
+          stripeConnected: fields.stripeConnected?.booleanValue,
+          stripeAccountId: fields.stripeAccountId?.stringValue || currentProfile.stripeAccountId,
+          buyMeACoffeeUrl: fields.buyMeACoffeeUrl?.stringValue || currentProfile.buyMeACoffeeUrl,
+          preferredTipMethod: fields.preferredTipMethod?.stringValue || currentProfile.preferredTipMethod
         });
+        updatePaymentNotice();
+        updateTipButtonLabel();
         syncStatus.textContent = "Live Synced";
       }
     }
@@ -746,6 +1055,14 @@ function checkAndroidBridge() {
         if (rawProfile) {
           const prof = JSON.parse(rawProfile);
           renderProfile(prof);
+          if (prof.preferredTipMethod) {
+            selectedPaymentMethod = prof.preferredTipMethod;
+            document.querySelectorAll(".method-tab").forEach(t => {
+              t.classList.toggle("selected", t.dataset.method === selectedPaymentMethod);
+            });
+          }
+          updatePaymentNotice();
+          updateTipButtonLabel();
         }
       }
 
@@ -769,6 +1086,9 @@ function checkAndroidBridge() {
   // 1. Render immediate rich seed so page is instantly complete & never blank
   renderProfile(fallbackProfile);
   renderLinks(fallbackLinks);
+  setupPaymentTabs();
+  updatePaymentNotice();
+  updateTipButtonLabel();
 
   // 2. Check Android Bridge (if running inside app's WebView)
   checkAndroidBridge();

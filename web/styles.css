@@ -875,6 +875,39 @@ body {
   color: #090d16;
 }
 
+.payment-method-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.method-tab {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-primary);
+  padding: 10px 8px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.method-tab:hover {
+  border-color: var(--accent-color);
+}
+
+.method-tab.selected {
+  background: var(--accent-gradient);
+  border-color: var(--accent-color);
+  color: #090d16;
+  font-weight: 800;
+}
+
 .input-group {
   display: flex;
   flex-direction: column;

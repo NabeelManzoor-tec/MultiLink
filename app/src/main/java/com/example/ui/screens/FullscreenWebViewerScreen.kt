@@ -63,16 +63,29 @@ import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
+import android.net.Uri
 import android.webkit.JavascriptInterface
+import com.example.data.firebase.FirestoreSyncManager
 import com.example.data.model.LinkItem
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
 class AndroidMultiLinkBridge(
+    private val context: android.content.Context,
     private val profile: CreatorProfile,
     private val links: List<LinkItem>,
     private val onRecordClick: (Long, String, String, Double) -> Unit
 ) {
+    @JavascriptInterface
+    fun downloadProductAssets(productTitle: String) {
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            com.example.util.LocalAssetDownloader.downloadProductAssets(context, productTitle)
+        }
+    }
+
     @JavascriptInterface
     fun getProfileJson(): String {
         return try {
@@ -88,6 +101,12 @@ class AndroidMultiLinkBridge(
                 put("tipGoalTitle", profile.tipGoalTitle)
                 put("tipGoalCurrent", profile.tipGoalCurrent)
                 put("tipGoalTarget", profile.tipGoalTarget)
+                put("paypalHandle", profile.paypalHandle)
+                put("cashAppTag", profile.cashAppTag)
+                put("stripeConnected", profile.stripeConnected)
+                put("stripeAccountId", profile.stripeAccountId)
+                put("buyMeACoffeeUrl", profile.buyMeACoffeeUrl)
+                put("preferredTipMethod", profile.preferredTipMethod)
             }.toString()
         } catch (e: Exception) {
             "{}"
@@ -124,6 +143,53 @@ class AndroidMultiLinkBridge(
     fun recordClick(linkId: Long, linkTitle: String, category: String, revenue: Double) {
         onRecordClick(linkId, linkTitle, category, revenue)
     }
+
+    @JavascriptInterface
+    fun recordTransaction(
+        txId: String,
+        type: String,
+        itemTitle: String,
+        amount: Double,
+        paymentMethod: String,
+        customerEmail: String,
+        customerName: String,
+        note: String
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            FirestoreSyncManager.recordTransaction(
+                context = context,
+                transactionId = txId.ifEmpty { "tx_web_${System.currentTimeMillis()}" },
+                type = type,
+                itemTitle = itemTitle,
+                amount = amount,
+                currency = "USD",
+                paymentMethod = paymentMethod,
+                creatorHandle = profile.handle,
+                creatorName = profile.displayName,
+                customerEmail = customerEmail.ifEmpty { "nabeeljuttm424@gmail.com" },
+                customerName = customerName.ifEmpty { "Customer" },
+                donorNote = note
+            )
+        }
+    }
+
+    @JavascriptInterface
+    fun syncUserProfile(
+        email: String,
+        displayName: String,
+        handle: String,
+        role: String
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            FirestoreSyncManager.syncUserProfile(
+                context = context,
+                email = email.ifEmpty { "nabeeljuttm424@gmail.com" },
+                displayName = displayName.ifEmpty { "Verified User" },
+                handle = handle.ifEmpty { profile.handle },
+                role = role.ifEmpty { "customer" }
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -137,7 +203,7 @@ fun FullscreenWebViewerScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val cleanHandle = profile.handle.trim().removePrefix("@").lowercase().ifEmpty { "alexa_aura" }
+    val cleanHandle = profile.handle.trim().removePrefix("@").lowercase().ifEmpty { "nabeeljutt" }
     val publicWebUrl = "https://gen-lang-client-0468598937.web.app/?handle=$cleanHandle"
     val localAssetUrl = "file:///android_asset/web/index.html?handle=$cleanHandle&theme=${profile.themeId}"
 
@@ -300,7 +366,7 @@ fun FullscreenWebViewerScreen(
                         settings.allowUniversalAccessFromFileURLs = true
 
                         addJavascriptInterface(
-                            AndroidMultiLinkBridge(profile, links) { linkId, title, category, revenue ->
+                            AndroidMultiLinkBridge(ctx, profile, links) { linkId, title, category, revenue ->
                                 onRecordClick(linkId, title, category, revenue)
                             },
                             "AndroidMultiLink"
@@ -316,6 +382,27 @@ fun FullscreenWebViewerScreen(
                         }
 
                         webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                val url = request?.url?.toString() ?: return false
+                                if (url.startsWith("https://paypal.me") ||
+                                    url.startsWith("https://www.paypal.me") ||
+                                    url.startsWith("https://cash.app") ||
+                                    url.startsWith("https://buy.stripe.com") ||
+                                    url.startsWith("https://buymeacoffee.com") ||
+                                    url.startsWith("https://gumroad.com") ||
+                                    (!url.startsWith("file://") && !url.contains("web.app"))
+                                ) {
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                        context.startActivity(intent)
+                                        return true
+                                    } catch (e: Exception) {
+                                        // fallback
+                                    }
+                                }
+                                return false
+                            }
+
                             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                                 isLoading = true
                             }
@@ -325,7 +412,6 @@ fun FullscreenWebViewerScreen(
                             }
 
                             override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
-                                // If online network error occurs, fall back immediately to embedded asset
                                 if (request?.url?.toString() != localAssetUrl) {
                                     view?.loadUrl(localAssetUrl)
                                 }

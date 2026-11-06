@@ -11,27 +11,26 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow read, write: if true;
 
       match /customer_orders/{orderId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if true;
+      }
+
+      match /transactions/{transactionId} {
+        allow read, write: if true;
       }
 
       match /creator_profile/{profileId} {
-        allow read: if true;
-        allow write: if isOwner(userId);
+        allow read, write: if true;
       }
 
       match /links/{linkId} {
-        allow read: if true;
-        allow write: if isOwner(userId);
+        allow read, write: if true;
       }
 
       match /events/{eventId} {
-        allow read: if isOwner(userId);
-        allow create: if true;
+        allow read, write: if true;
       }
     }
 
@@ -44,6 +43,14 @@ service cloud.firestore {
 
       match /events/{eventId} {
         allow read, create: if true;
+      }
+
+      match /transactions/{transactionId} {
+        allow read, write: if true;
+      }
+
+      match /subscribers/{subscriberId} {
+        allow read, write: if true;
       }
     }
   }

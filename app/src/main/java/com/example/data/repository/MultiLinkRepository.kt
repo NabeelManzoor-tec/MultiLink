@@ -101,199 +101,128 @@ class MultiLinkRepository(private val dao: MultiLinkDao) {
 
     suspend fun ensureInitialDataSeeded() {
         val existingProfile = dao.getProfile().firstOrNull()
-        if (existingProfile == null) {
+        if (existingProfile == null || existingProfile.handle == "alexa_aura" || existingProfile.displayName == "Alexa Rivers") {
             dao.insertOrUpdateProfile(
                 CreatorProfile(
                     id = 1,
-                    handle = "alexa_aura",
-                    displayName = "Alexa Rivers",
-                    headline = "Digital Artist & Creative Technologist",
-                    bio = "Creating next-gen cyberpunk shaders, 3D toolkits & mentoring ambitious indie creators worldwide 🚀",
+                    handle = "nabeeljutt",
+                    displayName = "Nabeel Jutt",
+                    headline = "Digital Creator & Builder",
+                    bio = "Welcome to my official MultiLink hub! Explore my projects, tools, socials, and direct support.",
                     avatarDrawableName = "creator_avatar_default_1793630325308",
-                    location = "Tokyo & San Francisco",
+                    location = "Global",
                     isVerified = true,
                     themeId = "CYBER_NEON",
-                    customDomain = "gen-lang-client-0468598937.web.app/?handle=alexa_aura",
-                    tipGoalTitle = "4K Unreal 5 Render Cluster",
-                    tipGoalCurrent = 1840.0,
-                    tipGoalTarget = 2500.0
+                    customDomain = "gen-lang-client-0468598937.web.app/?handle=nabeeljutt",
+                    tipGoalTitle = "Creator Studio & Production Setup",
+                    tipGoalCurrent = 0.0,
+                    tipGoalTarget = 1000.0,
+                    stripeConnected = false,
+                    stripeAccountId = "",
+                    paypalHandle = "nabeeljuttm424",
+                    cashAppTag = "",
+                    buyMeACoffeeUrl = "",
+                    preferredTipMethod = "PayPal"
                 )
             )
 
-            val seedLinks = listOf(
-                // Business: Digital Product (Featured)
-                LinkItem(
-                    title = "The Digital Frontier: Cyberpunk 3D Toolkit 2026",
-                    url = "https://gumroad.com/l/cyber-frontier",
-                    category = LinkCategory.PRODUCT,
-                    iconKey = "book",
-                    subtitle = "50+ Procedural Shaders, Unreal Engine 5 project & LUTs",
-                    price = "$39.00",
-                    badge = "BESTSELLER",
-                    coverImageName = "digital_product_mockup_1793630338547",
-                    isFeatured = true,
-                    isActive = true,
-                    orderIndex = 0,
-                    totalClicks = 342,
-                    isProProduct = true,
-                    downloadFileName = "cyberpunk_toolkit_2026.zip",
-                    fileSizeBytes = "1.4 GB",
-                    licenseType = "Commercial & Extended Use"
-                ),
-                // Business: Service
-                LinkItem(
-                    title = "1-on-1 Creative Direction & Portfolio Review",
-                    url = "https://cal.com/alexa-aura/mentorship",
-                    category = LinkCategory.SERVICE,
-                    iconKey = "calendar",
-                    subtitle = "45-minute live screen-share strategy session & roadmap",
-                    price = "$150 / session",
-                    badge = "2 SLOTS LEFT",
-                    isFeatured = true,
-                    isActive = true,
-                    orderIndex = 1,
-                    totalClicks = 88
-                ),
-                // Tip Jar
-                LinkItem(
-                    title = "Fuel The Lab • Send a Coffee / Tip",
-                    url = "https://buymeacoffee.com/alexaaura",
-                    category = LinkCategory.TIP,
-                    iconKey = "coffee",
-                    subtitle = "Directly support free open-source shader tutorials",
-                    price = "Pay what you want",
-                    badge = "SUPPORT",
-                    isFeatured = false,
-                    isActive = true,
-                    orderIndex = 2,
-                    totalClicks = 156
-                ),
-                // Social Links
-                LinkItem(
-                    title = "YouTube Channel",
-                    url = "https://youtube.com/@alexa_aura",
-                    category = LinkCategory.SOCIAL,
-                    iconKey = "youtube",
-                    subtitle = "128k Subscribers • Weekly VFX & Creative Coding Tutorials",
-                    isFeatured = false,
-                    isActive = true,
-                    orderIndex = 3,
-                    totalClicks = 512
-                ),
-                LinkItem(
-                    title = "Instagram",
-                    url = "https://instagram.com/alexa.aura",
-                    category = LinkCategory.SOCIAL,
-                    iconKey = "instagram",
-                    subtitle = "84.2k Followers • Daily 3D Renders & Aesthetic BTS",
-                    isFeatured = false,
-                    isActive = true,
-                    orderIndex = 4,
-                    totalClicks = 428
-                ),
-                LinkItem(
-                    title = "TikTok",
-                    url = "https://tiktok.com/@alexa_aura",
-                    category = LinkCategory.SOCIAL,
-                    iconKey = "tiktok",
-                    subtitle = "210k Community • Viral Breakdown Reels",
-                    isFeatured = false,
-                    isActive = true,
-                    orderIndex = 5,
-                    totalClicks = 620
-                ),
-                LinkItem(
-                    title = "X / Twitter",
-                    url = "https://x.com/alexa_aura",
-                    category = LinkCategory.SOCIAL,
-                    iconKey = "twitter",
-                    subtitle = "Indie Devlogs, Real-Time Graphics Discussions & Drops",
-                    isFeatured = false,
-                    isActive = true,
-                    orderIndex = 6,
-                    totalClicks = 289
-                ),
-                LinkItem(
-                    title = "Discord Community",
-                    url = "https://discord.gg/alexa-creators",
-                    category = LinkCategory.SOCIAL,
-                    iconKey = "discord",
-                    subtitle = "The Cyber Studio Lounge • 4.8k Active Members",
-                    badge = "ACTIVE",
-                    isFeatured = false,
-                    isActive = true,
-                    orderIndex = 7,
-                    totalClicks = 194
-                ),
-                LinkItem(
-                    title = "GitHub",
-                    url = "https://github.com/alexa-aura",
-                    category = LinkCategory.SOCIAL,
-                    iconKey = "github",
-                    subtitle = "Free GLSL Shaders, ThreeJS boilerplates & Python tools",
-                    isFeatured = false,
-                    isActive = true,
-                    orderIndex = 8,
-                    totalClicks = 143
-                ),
-                LinkItem(
-                    title = "Spotify Playlist: Late Night Cyber Beats",
-                    url = "https://open.spotify.com/playlist/alexa-lofi",
-                    category = LinkCategory.SOCIAL,
-                    iconKey = "spotify",
-                    subtitle = "Curated synthwave & ambient beats for deep focus",
-                    isFeatured = false,
-                    isActive = true,
-                    orderIndex = 9,
-                    totalClicks = 177
-                ),
-                LinkItem(
-                    title = "My Minimalist Desk Setup & Gear",
-                    url = "https://kit.co/alexa/creator-desk",
-                    category = LinkCategory.AFFILIATE,
-                    iconKey = "sparkles",
-                    subtitle = "Ultra-wide OLED, Shure Mic & Custom Mechanical Keyboard",
-                    badge = "15% OFF",
-                    isFeatured = false,
-                    isActive = true,
-                    orderIndex = 10,
-                    totalClicks = 95
-                )
-            )
-
-            dao.insertAllLinks(seedLinks)
-
-            // Seed sample telemetry events
-            val now = System.currentTimeMillis()
-            val sampleEvents = mutableListOf<ClickEvent>()
-            val seedSources = listOf("Direct / QR Scan", "Instagram Bio", "TikTok Bio", "Twitter / X", "YouTube Description")
-            val seedCountries = listOf("United States", "Japan", "Germany", "United Kingdom", "Canada", "Singapore")
-            val seedDevices = listOf("Mobile (Android)", "Mobile (iOS)", "Desktop (Mac)")
-
-            for (i in 0..24) {
-                val link = seedLinks.random()
-                val offset = (25 - i) * 1800000L + Random.nextLong(10000, 600000)
-                var rev = 0.0
-                if (link.category == LinkCategory.PRODUCT && Random.nextFloat() > 0.6f) {
-                    rev = 39.0
-                } else if (link.category == LinkCategory.TIP && Random.nextFloat() > 0.5f) {
-                    rev = listOf(5.0, 10.0, 25.0).random()
-                }
-
-                sampleEvents.add(
-                    ClickEvent(
-                        linkId = (i % seedLinks.size + 1).toLong(),
-                        linkTitle = link.title,
-                        category = link.category.name,
-                        timestamp = now - offset,
-                        sourcePlatform = seedSources.random(),
-                        country = seedCountries.random(),
-                        device = seedDevices.random(),
-                        revenueAmount = rev
+            val existingLinks = dao.getAllLinks().firstOrNull()
+            if (existingLinks.isNullOrEmpty() || existingLinks.any { it.url.contains("alexa") }) {
+                dao.deleteAllLinks()
+                val seedLinks = listOf(
+                    // Business: Digital Product
+                    LinkItem(
+                        title = "Cyber Frontier Cinematic 3D LUT Pack",
+                        url = "https://gumroad.com",
+                        category = LinkCategory.PRODUCT,
+                        iconKey = "book",
+                        subtitle = "Professional 3D LUT color grading presets, .cube files & config",
+                        price = "$39.00",
+                        badge = "POPULAR",
+                        coverImageName = "digital_product_mockup_1793630338547",
+                        isFeatured = true,
+                        isActive = true,
+                        orderIndex = 0,
+                        totalClicks = 0,
+                        isProProduct = true,
+                        downloadFileName = "cyber_frontier_lut.cube",
+                        fileSizeBytes = "12 MB",
+                        licenseType = "Commercial & Studio License"
+                    ),
+                    // Tip Jar
+                    LinkItem(
+                        title = "Support My Work • Direct Creator Tip",
+                        url = "https://www.paypal.me/nabeeljuttm424/5",
+                        category = LinkCategory.TIP,
+                        iconKey = "coffee",
+                        subtitle = "Directly support content creation and open tools",
+                        price = "Pay what you want",
+                        badge = "SUPPORT",
+                        isFeatured = false,
+                        isActive = true,
+                        orderIndex = 1,
+                        totalClicks = 0
+                    ),
+                    // Social Links
+                    LinkItem(
+                        title = "YouTube Channel",
+                        url = "https://youtube.com",
+                        category = LinkCategory.SOCIAL,
+                        iconKey = "youtube",
+                        subtitle = "Official YouTube Videos & Creator Content",
+                        isFeatured = false,
+                        isActive = true,
+                        orderIndex = 2,
+                        totalClicks = 0
+                    ),
+                    LinkItem(
+                        title = "Instagram",
+                        url = "https://instagram.com",
+                        category = LinkCategory.SOCIAL,
+                        iconKey = "instagram",
+                        subtitle = "Daily Updates, Stories & Highlights",
+                        isFeatured = false,
+                        isActive = true,
+                        orderIndex = 3,
+                        totalClicks = 0
+                    ),
+                    LinkItem(
+                        title = "TikTok",
+                        url = "https://tiktok.com",
+                        category = LinkCategory.SOCIAL,
+                        iconKey = "tiktok",
+                        subtitle = "Shorts, Reels & Creative Highlights",
+                        isFeatured = false,
+                        isActive = true,
+                        orderIndex = 4,
+                        totalClicks = 0
+                    ),
+                    LinkItem(
+                        title = "X / Twitter",
+                        url = "https://x.com",
+                        category = LinkCategory.SOCIAL,
+                        iconKey = "twitter",
+                        subtitle = "Updates, Threads & Announcements",
+                        isFeatured = false,
+                        isActive = true,
+                        orderIndex = 5,
+                        totalClicks = 0
+                    ),
+                    LinkItem(
+                        title = "GitHub",
+                        url = "https://github.com",
+                        category = LinkCategory.SOCIAL,
+                        iconKey = "github",
+                        subtitle = "Open Source Code, Repositories & Tools",
+                        isFeatured = false,
+                        isActive = true,
+                        orderIndex = 6,
+                        totalClicks = 0
                     )
                 )
+
+                dao.insertAllLinks(seedLinks)
             }
-            dao.insertAllClickEvents(sampleEvents)
         }
     }
 }

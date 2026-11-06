@@ -134,7 +134,7 @@ fun LinksScreen(
                         profile = prof,
                         onEditClicked = { showEditProfileDialog = true },
                         onShareClicked = {
-                            val cleanHandle = prof.handle.trim().removePrefix("@").lowercase().ifEmpty { "alexa_aura" }
+                            val cleanHandle = prof.handle.trim().removePrefix("@").lowercase().ifEmpty { "nabeeljutt" }
                             val liveUrl = "https://gen-lang-client-0468598937.web.app/?handle=$cleanHandle"
                             val sendIntent = android.content.Intent().apply {
                                 action = android.content.Intent.ACTION_SEND
@@ -1015,7 +1015,7 @@ fun EditProfileDialog(
                             bio = bio,
                             location = location,
                             avatarDrawableName = avatarDrawableName,
-                            customDomain = "gen-lang-client-0468598937.web.app/?handle=${handle.trim().removePrefix("@").lowercase().ifEmpty { "alexa_aura" }}"
+                            customDomain = "gen-lang-client-0468598937.web.app/?handle=${handle.trim().removePrefix("@").lowercase().ifEmpty { "nabeeljutt" }}"
                         )
                     )
                 },

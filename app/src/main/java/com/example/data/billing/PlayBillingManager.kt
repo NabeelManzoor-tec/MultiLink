@@ -8,6 +8,7 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ConsumeParams
 import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
@@ -43,8 +44,31 @@ class PlayBillingManager(
 
     companion object {
         private const val TAG = "PlayBilling"
-        const val SUB_MONTHLY = "multilink_pro_monthly"
-        const val SUB_ANNUAL = "multilink_pro_annual"
+
+        // Primary underscore product IDs starting with numbers
+        const val SUB_MONTHLY = "1_pro_monthly"
+        const val SUB_ANNUAL = "2_pro_annual"
+
+        // Compatibility aliases (both hyphenated and legacy)
+        const val SUB_MONTHLY_HYPHEN = "1-pro-monthly"
+        const val SUB_MONTHLY_LEGACY = "multilink_pro_monthly"
+        const val SUB_ANNUAL_HYPHEN = "2-pro-annual"
+        const val SUB_ANNUAL_LEGACY = "multilink_pro_annual"
+
+        // In-App Products (Tips & LUT Pack)
+        const val INAPP_TIP_5 = "1_tip_5"
+        const val INAPP_TIP_10 = "2_tip_10"
+        const val INAPP_TIP_25 = "3_tip_25"
+        const val INAPP_PRODUCT_LUT = "4_product_lut"
+
+        const val INAPP_TIP_5_HYPHEN = "1-tip-5"
+        const val INAPP_TIP_10_HYPHEN = "2-tip-10"
+        const val INAPP_TIP_25_HYPHEN = "3-tip-25"
+        const val INAPP_PRODUCT_LUT_HYPHEN = "4-product-lut"
+
+        val ALL_SUB_ANNUAL_IDS = setOf(SUB_ANNUAL, SUB_ANNUAL_HYPHEN, SUB_ANNUAL_LEGACY)
+        val ALL_SUB_MONTHLY_IDS = setOf(SUB_MONTHLY, SUB_MONTHLY_HYPHEN, SUB_MONTHLY_LEGACY)
+        val ALL_TIP_IDS = setOf(INAPP_TIP_5, INAPP_TIP_5_HYPHEN, INAPP_TIP_10, INAPP_TIP_10_HYPHEN, INAPP_TIP_25, INAPP_TIP_25_HYPHEN)
     }
 
     private val _billingStatus = MutableStateFlow<BillingStatus>(BillingStatus.Idle)
@@ -95,34 +119,60 @@ class PlayBillingManager(
     }
 
     private fun querySubscriptionProducts() {
-        val productList = listOf(
+        val subProductIds = listOf(
+            SUB_MONTHLY, SUB_MONTHLY_HYPHEN, SUB_MONTHLY_LEGACY,
+            SUB_ANNUAL, SUB_ANNUAL_HYPHEN, SUB_ANNUAL_LEGACY
+        ).distinct()
+
+        val subList = subProductIds.map { id ->
             QueryProductDetailsParams.Product.newBuilder()
-                .setProductId(SUB_MONTHLY)
-                .setProductType(BillingClient.ProductType.SUBS)
-                .build(),
-            QueryProductDetailsParams.Product.newBuilder()
-                .setProductId(SUB_ANNUAL)
+                .setProductId(id)
                 .setProductType(BillingClient.ProductType.SUBS)
                 .build()
-        )
+        }
 
-        val params = QueryProductDetailsParams.newBuilder()
-            .setProductList(productList)
-            .build()
+        val inappProductIds = listOf(
+            INAPP_TIP_5, INAPP_TIP_5_HYPHEN,
+            INAPP_TIP_10, INAPP_TIP_10_HYPHEN,
+            INAPP_TIP_25, INAPP_TIP_25_HYPHEN,
+            INAPP_PRODUCT_LUT, INAPP_PRODUCT_LUT_HYPHEN
+        ).distinct()
 
-        billingClient.queryProductDetailsAsync(params) { billingResult, queryProductDetailsResult ->
+        val inappList = inappProductIds.map { id ->
+            QueryProductDetailsParams.Product.newBuilder()
+                .setProductId(id)
+                .setProductType(BillingClient.ProductType.INAPP)
+                .build()
+        }
+
+        billingClient.queryProductDetailsAsync(
+            QueryProductDetailsParams.newBuilder().setProductList(subList).build()
+        ) { billingResult, queryProductDetailsResult ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                val productDetailsList = queryProductDetailsResult.productDetailsList
-                val map = productDetailsList.associateBy { it.productId }
-                _productDetailsMap.value = map
-                _billingStatus.value = BillingStatus.Connected(productDetailsList)
-                Log.d(TAG, "Loaded ${productDetailsList.size} subscription products from Google Play")
+                val list = queryProductDetailsResult.productDetailsList
+                val current = _productDetailsMap.value.toMutableMap()
+                list.forEach { current[it.productId] = it }
+                _productDetailsMap.value = current
+                _billingStatus.value = BillingStatus.Connected(current.values.toList())
+                Log.d(TAG, "Loaded ${list.size} subscriptions from Google Play")
             } else {
-                Log.w(TAG, "Failed to query product details: ${billingResult.debugMessage}")
+                Log.w(TAG, "Failed to query subscriptions: ${billingResult.debugMessage}")
                 _billingStatus.value = BillingStatus.Error(
                     "Play Console In-App Subscriptions pending (Code: ${billingResult.responseCode}). " +
-                    "Make sure 'multilink_pro_monthly' and 'multilink_pro_annual' are active in Play Console."
+                    "Make sure '$SUB_MONTHLY' ($9.99) and '$SUB_ANNUAL' ($69.99) are active in Play Console."
                 )
+            }
+        }
+
+        billingClient.queryProductDetailsAsync(
+            QueryProductDetailsParams.newBuilder().setProductList(inappList).build()
+        ) { billingResult, queryProductDetailsResult ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                val list = queryProductDetailsResult.productDetailsList
+                val current = _productDetailsMap.value.toMutableMap()
+                list.forEach { current[it.productId] = it }
+                _productDetailsMap.value = current
+                Log.d(TAG, "Loaded ${list.size} in-app products from Google Play")
             }
         }
     }
@@ -134,13 +184,19 @@ class PlayBillingManager(
     ) {
         this.onPurchaseSuccessCallback = onSuccess
 
-        val targetProductId = if (planTier == "PRO_ANNUAL") SUB_ANNUAL else SUB_MONTHLY
-        val details = _productDetailsMap.value[targetProductId]
+        val targetCandidates = if (planTier == "PRO_ANNUAL") {
+            listOf(SUB_ANNUAL, SUB_ANNUAL_HYPHEN, SUB_ANNUAL_LEGACY)
+        } else {
+            listOf(SUB_MONTHLY, SUB_MONTHLY_HYPHEN, SUB_MONTHLY_LEGACY)
+        }
+
+        val details = targetCandidates.firstNotNullOfOrNull { _productDetailsMap.value[it] }
 
         if (details == null) {
-            Log.w(TAG, "ProductDetails for $targetProductId not found in Play Store response")
+            val primaryId = if (planTier == "PRO_ANNUAL") SUB_ANNUAL else SUB_MONTHLY
+            Log.w(TAG, "ProductDetails for $primaryId not found in Play Store response")
             _billingStatus.value = BillingStatus.Error(
-                "Subscription product '$targetProductId' not yet active on Google Play. " +
+                "Subscription product '$primaryId' not yet active on Google Play. " +
                 "Verify your Play Console Merchant account and In-App Subscriptions setup."
             )
             return
@@ -148,7 +204,7 @@ class PlayBillingManager(
 
         val offerToken = details.subscriptionOfferDetails?.firstOrNull()?.offerToken
         if (offerToken == null) {
-            Log.w(TAG, "No valid subscription offer token found for $targetProductId")
+            Log.w(TAG, "No valid subscription offer token found for ${details.productId}")
             _billingStatus.value = BillingStatus.Error("No valid pricing offer available from Google Play.")
             return
         }
@@ -189,8 +245,18 @@ class PlayBillingManager(
 
     private fun handleVerifiedPurchase(purchase: Purchase) {
         if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
-            // Acknowledge the purchase if not already acknowledged
-            if (!purchase.isAcknowledged) {
+            val isTip = purchase.products.any { ALL_TIP_IDS.contains(it) }
+
+            if (isTip) {
+                // Consume tip so supporter can send tips repeatedly
+                val consumeParams = ConsumeParams.newBuilder()
+                    .setPurchaseToken(purchase.purchaseToken)
+                    .build()
+                billingClient.consumeAsync(consumeParams) { result, _ ->
+                    Log.d(TAG, "Tip consumed: ${result.debugMessage}")
+                }
+            } else if (!purchase.isAcknowledged) {
+                // Acknowledge subscription or non-consumable digital product
                 val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
                     .setPurchaseToken(purchase.purchaseToken)
                     .build()
@@ -204,7 +270,7 @@ class PlayBillingManager(
                 }
             }
 
-            val isAnnual = purchase.products.contains(SUB_ANNUAL)
+            val isAnnual = purchase.products.any { ALL_SUB_ANNUAL_IDS.contains(it) }
             val tier = if (isAnnual) "PRO_ANNUAL" else "PRO_MONTHLY"
             val orderId = purchase.orderId ?: "GPA.PLAY-${System.currentTimeMillis()}"
 
@@ -229,7 +295,7 @@ class PlayBillingManager(
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 val active = purchases.firstOrNull { it.purchaseState == Purchase.PurchaseState.PURCHASED }
                 if (active != null) {
-                    val isAnnual = active.products.contains(SUB_ANNUAL)
+                    val isAnnual = active.products.any { ALL_SUB_ANNUAL_IDS.contains(it) }
                     val tier = if (isAnnual) "PRO_ANNUAL" else "PRO_MONTHLY"
                     _billingStatus.value = BillingStatus.SubscriptionActive(
                         purchaseToken = active.purchaseToken,

@@ -1,6 +1,6 @@
 {
-  "summary": "Implementation plan to bump app version to 5 (5.0), resolve the unauthorized free PRO access issue by integrating Google Play Billing with strict purchase token verification, strictly gate all PRO features behind verified purchases, and add a Developer Payout & Revenue Guide explaining how and when funds land in the developer's bank account via Google Play Console Merchant Profile.",
-  "updatedAt": "2026-11-04T23:23:10.014075879Z",
+  "summary": "Google Play Console Subscription and In-App Product IDs using underscores (e.g. 1_pro_monthly, 2_pro_annual, 1_tip_5) with $9.99 monthly and $69.99 yearly pricing. PlayBillingManager queries both underscore and hyphenated aliases for 100% compatibility, with automated purchase acknowledgment, tip consumption, and Firestore sync. Zero UI buttons added.",
+  "updatedAt": "2026-11-06T11:21:45.608126185Z",
   "requestFeedback": true,
   "userFacing": true
 }

@@ -1076,16 +1076,19 @@ fun TipModalDialog(
                 onClick = {
                     val amountStr = String.format("%.2f", selectedAmount)
                     val liveUrl = when (selectedPaymentMethod) {
-                        "PayPal" -> "https://www.paypal.me/${profile.paypalHandle.ifEmpty { "alexarivers" }}/$amountStr"
+                        "PayPal" -> "https://www.paypal.me/${profile.paypalHandle.ifEmpty { "nabeeljuttm424" }}/$amountStr"
                         "Cash App" -> {
-                            val tag = profile.cashAppTag.ifEmpty { "AlexaAura" }.replace("$", "")
+                            val tag = profile.cashAppTag.ifEmpty { "nabeeljutt" }.replace("$", "")
                             "https://cash.app/$$tag/$amountStr"
                         }
                         "Credit / Debit Card" -> {
-                            if (profile.buyMeACoffeeUrl.isNotEmpty()) {
+                            if (profile.stripeConnected && profile.stripeAccountId.startsWith("http") && !profile.stripeAccountId.contains("live_multilink_tip")) {
+                                profile.stripeAccountId
+                            } else if (profile.buyMeACoffeeUrl.isNotEmpty()) {
                                 if (profile.buyMeACoffeeUrl.startsWith("http")) profile.buyMeACoffeeUrl else "https://${profile.buyMeACoffeeUrl}"
                             } else {
-                                "https://buy.stripe.com/live_multilink_tip?creator=${profile.handle}&amount=$amountStr"
+                                val user = profile.paypalHandle.ifEmpty { "nabeeljuttm424" }.replace("@", "")
+                                "https://www.paypal.me/$user/$amountStr"
                             }
                         }
                         else -> {
@@ -1093,7 +1096,7 @@ fun TipModalDialog(
                             if (profile.buyMeACoffeeUrl.isNotEmpty()) {
                                 if (profile.buyMeACoffeeUrl.startsWith("http")) profile.buyMeACoffeeUrl else "https://${profile.buyMeACoffeeUrl}"
                             } else {
-                                "https://www.paypal.me/${profile.paypalHandle.ifEmpty { "alexarivers" }}/$amountStr"
+                                "https://www.paypal.me/${profile.paypalHandle.ifEmpty { "nabeeljuttm424" }}/$amountStr"
                             }
                         }
                     }
@@ -1238,7 +1241,10 @@ fun OrderSuccessReceiptDialog(
 
                         Button(
                             onClick = {
-                                Toast.makeText(context, "Downloading $fileName...", Toast.LENGTH_LONG).show()
+                                com.example.util.LocalAssetDownloader.downloadProductAssets(
+                                    context = context,
+                                    productTitle = product.title
+                                )
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = BrandWarning),
                             shape = RoundedCornerShape(8.dp),
@@ -1249,7 +1255,7 @@ fun OrderSuccessReceiptDialog(
                         ) {
                             Icon(Icons.Default.Download, contentDescription = null, tint = BrandDarkBackground, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Download Assets Now", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = BrandDarkBackground)
+                            Text("Download Real Asset Bundle (.cube + .json)", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = BrandDarkBackground)
                         }
                     }
                 }

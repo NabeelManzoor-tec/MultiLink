@@ -6,9 +6,29 @@
         "userId": { "type": "string" },
         "email": { "type": "string" },
         "displayName": { "type": "string" },
+        "handle": { "type": "string" },
         "role": { "type": "string" },
+        "totalOrders": { "type": "number" },
+        "totalSpent": { "type": "number" },
         "createdAt": { "type": "timestamp" },
         "updatedAt": { "type": "timestamp" }
+      }
+    },
+    "Transaction": {
+      "path": "public_profiles/{handle}/transactions/{transactionId}",
+      "fields": {
+        "transactionId": { "type": "string" },
+        "type": { "type": "string" },
+        "itemTitle": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "creatorHandle": { "type": "string" },
+        "creatorName": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "status": { "type": "string" },
+        "donorNote": { "type": "string" },
+        "timestamp": { "type": "timestamp" }
       }
     },
     "CustomerOrder": {

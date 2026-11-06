@@ -22,7 +22,7 @@ object FirestoreSyncManager {
     }
 
     fun cleanHandle(handle: String): String {
-        return handle.trim().removePrefix("@").lowercase().ifEmpty { "alexa_aura" }
+        return handle.trim().removePrefix("@").lowercase().ifEmpty { "nabeeljutt" }
     }
 
     suspend fun syncProfileToFirestore(context: Context, profile: CreatorProfile) {
@@ -56,9 +56,128 @@ object FirestoreSyncManager {
             )
 
             docRef.set(data).await()
-            Log.d(TAG, "Profile successfully synced to public_profiles/$handle")
+
+            // Also keep record in users collection
+            val userId = "nabeeljuttm424_gmail_com"
+            val userProfileRef = db.collection("users").document(userId)
+            userProfileRef.set(
+                hashMapOf(
+                    "userId" to userId,
+                    "email" to "nabeeljuttm424@gmail.com",
+                    "displayName" to profile.displayName,
+                    "handle" to profile.handle,
+                    "role" to "creator",
+                    "updatedAt" to FieldValue.serverTimestamp()
+                ),
+                com.google.firebase.firestore.SetOptions.merge()
+            ).await()
+
+            userProfileRef.collection("creator_profile").document("profile").set(data).await()
+
+            Log.d(TAG, "Profile successfully synced to public_profiles/$handle and users/$userId")
         } catch (e: Exception) {
             Log.w(TAG, "Error syncing profile to Firestore: ${e.message}")
+        }
+    }
+
+    suspend fun syncUserProfile(
+        context: Context,
+        email: String,
+        displayName: String,
+        handle: String,
+        role: String = "customer"
+    ) {
+        try {
+            val db = getFirestore(context)
+            val cleanEmail = email.trim().lowercase()
+            val userId = cleanEmail.replace(".", "_").replace("@", "_at_").ifEmpty { "anonymous_user" }
+            val userRef = db.collection("users").document(userId)
+            val userData = hashMapOf<String, Any>(
+                "userId" to userId,
+                "email" to cleanEmail,
+                "displayName" to displayName,
+                "handle" to handle,
+                "role" to role,
+                "updatedAt" to FieldValue.serverTimestamp()
+            )
+            userRef.set(userData, com.google.firebase.firestore.SetOptions.merge()).await()
+            Log.d(TAG, "User profile saved in Firestore: users/$userId")
+        } catch (e: Exception) {
+            Log.w(TAG, "Error saving user profile to Firestore: ${e.message}")
+        }
+    }
+
+    suspend fun recordTransaction(
+        context: Context,
+        transactionId: String,
+        type: String, // "TIP", "PRODUCT_PURCHASE", "SERVICE_BOOKING", "PRO_SUBSCRIPTION"
+        itemTitle: String,
+        amount: Double,
+        currency: String = "USD",
+        paymentMethod: String,
+        creatorHandle: String,
+        creatorName: String,
+        customerEmail: String = "nabeeljuttm424@gmail.com",
+        customerName: String = "Verified Customer",
+        donorNote: String = "",
+        status: String = "COMPLETED"
+    ) {
+        try {
+            val db = getFirestore(context)
+            val handle = cleanHandle(creatorHandle)
+            val txData = hashMapOf<String, Any>(
+                "transactionId" to transactionId,
+                "type" to type,
+                "itemTitle" to itemTitle,
+                "amount" to amount,
+                "currency" to currency,
+                "paymentMethod" to paymentMethod,
+                "creatorHandle" to handle,
+                "creatorName" to creatorName,
+                "customerEmail" to customerEmail,
+                "customerName" to customerName,
+                "donorNote" to donorNote,
+                "status" to status,
+                "timestamp" to FieldValue.serverTimestamp(),
+                "epochMillis" to System.currentTimeMillis()
+            )
+
+            // 1. Record under creator's public profile transactions
+            db.collection("public_profiles").document(handle)
+                .collection("transactions").document(transactionId)
+                .set(txData).await()
+
+            // 2. Increment creator's tipGoalCurrent and totalRevenue
+            db.collection("public_profiles").document(handle).update(
+                "tipGoalCurrent", FieldValue.increment(amount),
+                "totalRevenue", FieldValue.increment(amount)
+            ).await()
+
+            // 3. Record in users customer_orders / transactions
+            val cleanEmail = customerEmail.trim().lowercase()
+            val userId = cleanEmail.replace(".", "_").replace("@", "_at_").ifEmpty { "customer_guest" }
+            db.collection("users").document(userId)
+                .collection("transactions").document(transactionId)
+                .set(txData).await()
+
+            db.collection("users").document(userId)
+                .collection("customer_orders").document(transactionId)
+                .set(
+                    hashMapOf(
+                        "orderId" to transactionId,
+                        "itemTitle" to itemTitle,
+                        "itemCategory" to type,
+                        "price" to amount,
+                        "creatorHandle" to handle,
+                        "creatorName" to creatorName,
+                        "status" to status,
+                        "createdAt" to FieldValue.serverTimestamp()
+                    )
+                ).await()
+
+            Log.d(TAG, "Transaction successfully recorded in Firestore: $transactionId ($$amount)")
+        } catch (e: Exception) {
+            Log.w(TAG, "Error recording transaction to Firestore: ${e.message}")
         }
     }
 

@@ -11,7 +11,7 @@ class ExampleRobolectricTest {
 
     @Test
     fun qrCodeMatrixGenerationProducesValidMatrix() {
-        val matrix = QrCodeHelper.generateBitMatrix("https://gen-lang-client-0468598937.web.app/?handle=alexa_aura", 25)
+        val matrix = QrCodeHelper.generateBitMatrix("https://gen-lang-client-0468598937.web.app/?handle=nabeeljutt", 25)
         assertNotNull(matrix)
         assertTrue(matrix!!.isNotEmpty())
         assertTrue(matrix[0].isNotEmpty())

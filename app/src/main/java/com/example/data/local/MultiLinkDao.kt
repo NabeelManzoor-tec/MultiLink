@@ -47,6 +47,12 @@ interface MultiLinkDao {
     @Query("DELETE FROM links WHERE id = :id")
     suspend fun deleteLinkById(id: Long)
 
+    @Query("DELETE FROM links")
+    suspend fun deleteAllLinks()
+
+    @Query("DELETE FROM click_events")
+    suspend fun deleteAllClickEvents()
+
     @Query("UPDATE links SET totalClicks = totalClicks + 1 WHERE id = :linkId")
     suspend fun incrementLinkClicks(linkId: Long)
 

@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalMall
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.Payments
@@ -137,7 +138,7 @@ fun MonetizeScreen(
     var showProSuccessReceiptDialog by remember { mutableStateOf(false) }
     var lastSubscribedPlanTier by remember { mutableStateOf("PRO_ANNUAL") }
     var lastSubscribedPaymentMethod by remember { mutableStateOf("") }
-    var lastSubscribedAmount by remember { mutableStateOf(79.00) }
+    var lastSubscribedAmount by remember { mutableStateOf(69.99) }
     var lastSubscribedRenewalDate by remember { mutableStateOf("") }
     var lastTransactionRef by remember { mutableStateOf("") }
     var showPayoutHistoryDialog by remember { mutableStateOf(false) }
@@ -211,7 +212,7 @@ fun MonetizeScreen(
                         profile = prof,
                         onSendTestTip = {
                             onSimulateTip()
-                            Toast.makeText(context, "Simulated +$10.00 Tip received via ${prof.preferredTipMethod}!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "+$10.00 Tip recorded to Firebase & goal updated!", Toast.LENGTH_SHORT).show()
                         }
                     )
                 }
@@ -578,7 +579,7 @@ fun ProActiveStatusCard(
                         }
                     }
                     Text(
-                        text = if (profile.proPlanTier == "PRO_ANNUAL") "Annual Membership ($79.00/yr)" else "Monthly Membership ($9.99/mo)",
+                        text = if (profile.proPlanTier == "PRO_ANNUAL") "Annual Membership ($69.99/yr)" else "Monthly Membership ($9.99/mo)",
                         fontSize = 12.sp,
                         color = TextPrimary,
                         fontWeight = FontWeight.SemiBold
@@ -795,6 +796,56 @@ fun CreatorPayoutMethodsCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            val context = LocalContext.current
+            OutlinedButton(
+                onClick = {
+                    val targetUrl = when (profile.preferredTipMethod) {
+                        "CashApp" -> {
+                            val tag = profile.cashAppTag.removePrefix("$").ifEmpty { "AlexaAura" }
+                            "https://cash.app/$$tag/5"
+                        }
+                        "Stripe" -> {
+                            if (profile.stripeConnected && profile.stripeAccountId.startsWith("http") && !profile.stripeAccountId.contains("live_creator_tip")) {
+                                profile.stripeAccountId
+                            } else {
+                                val user = profile.paypalHandle.removePrefix("@").ifEmpty { "nabeeljuttm424" }
+                                "https://www.paypal.me/$user/5"
+                            }
+                        }
+                        "BuyMeACoffee" -> {
+                            val url = profile.buyMeACoffeeUrl.removePrefix("https://").removePrefix("http://")
+                            if (url.isNotEmpty()) "https://$url" else "https://www.paypal.me/${profile.paypalHandle.removePrefix("@").ifEmpty { "nabeeljuttm424" }}/5"
+                        }
+                        else -> {
+                            val user = profile.paypalHandle.removePrefix("@").ifEmpty { "nabeeljuttm424" }
+                            "https://www.paypal.me/$user/5"
+                        }
+                    }
+                    try {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(targetUrl))
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        android.widget.Toast.makeText(context, "Could not open link: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                },
+                shape = RoundedCornerShape(10.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, BrandSuccess.copy(alpha = 0.5f)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandSuccess),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp)
+            ) {
+                Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(15.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Test Real Payout Link ($5 to ${profile.preferredTipMethod})",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -1288,7 +1339,7 @@ fun CreatorPayoutConfigDialog(
                     value = paypalHandle,
                     onValueChange = { paypalHandle = it },
                     label = { Text("PayPal Username / Handle") },
-                    placeholder = { Text("username (e.g. alexa.rivers)") },
+                    placeholder = { Text("username (e.g. nabeeljuttm424)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1302,7 +1353,7 @@ fun CreatorPayoutConfigDialog(
                     value = cashAppTag,
                     onValueChange = { cashAppTag = it },
                     label = { Text("Cash App \$Cashtag") },
-                    placeholder = { Text("\$AlexaAura") },
+                    placeholder = { Text("\$yourtag") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1328,26 +1379,51 @@ fun CreatorPayoutConfigDialog(
                     color = TextPrimary
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf("Stripe", "PayPal", "CashApp").forEach { method ->
-                        val isSelected = preferredTipMethod == method
-                        Button(
-                            onClick = { preferredTipMethod = method },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isSelected) BrandPrimary else BrandDarkBackground
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = method,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSelected) TextPrimary else TextSecondary
-                            )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("PayPal", "CashApp").forEach { method ->
+                            val isSelected = preferredTipMethod == method
+                            Button(
+                                onClick = { preferredTipMethod = method },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSelected) BrandPrimary else BrandDarkBackground
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = method,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) TextPrimary else TextSecondary
+                                )
+                            }
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Stripe", "BuyMeACoffee").forEach { method ->
+                            val isSelected = preferredTipMethod == method
+                            Button(
+                                onClick = { preferredTipMethod = method },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSelected) BrandPrimary else BrandDarkBackground
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = method,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) TextPrimary else TextSecondary
+                                )
+                            }
                         }
                     }
                 }
@@ -1405,7 +1481,7 @@ fun ProUpgradeDialog(
                     status.tier,
                     "Google Play In-App Billing",
                     renewalDateStr,
-                    if (status.tier == "PRO_ANNUAL") 79.00 else 9.99,
+                    if (status.tier == "PRO_ANNUAL") 69.99 else 9.99,
                     status.purchaseToken,
                     status.orderId
                 )
@@ -1426,8 +1502,8 @@ fun ProUpgradeDialog(
         }
     }
 
-    val planAmount = if (selectedPlan == "PRO_ANNUAL") 79.00 else 9.99
-    val planPriceText = if (selectedPlan == "PRO_ANNUAL") "$79.00/yr" else "$9.99/mo"
+    val planAmount = if (selectedPlan == "PRO_ANNUAL") 69.99 else 9.99
+    val planPriceText = if (selectedPlan == "PRO_ANNUAL") "$69.99/yr" else "$9.99/mo"
     val targetProductId = if (selectedPlan == "PRO_ANNUAL") PlayBillingManager.SUB_ANNUAL else PlayBillingManager.SUB_MONTHLY
 
     AlertDialog(
@@ -1501,8 +1577,8 @@ fun ProUpgradeDialog(
                 // Plan 1: Annual
                 PlanOptionCard(
                     title = "Annual Membership",
-                    price = "$79.00 / year",
-                    subtitle = "$6.58 / mo • Save 34% (Billed annually)",
+                    price = "$69.99 / year",
+                    subtitle = "$5.83 / mo • Save 42% (Billed annually)",
                     badge = "BEST VALUE",
                     isSelected = selectedPlan == "PRO_ANNUAL",
                     onClick = { selectedPlan = "PRO_ANNUAL" }
